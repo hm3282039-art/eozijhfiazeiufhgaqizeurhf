@@ -1,0 +1,14 @@
+{
+  "name": "pet-world-3d",
+  "version": "1.0.0",
+  "description": "Jeu de pets en 3D (Three.js) inspiré de Pet Simulator 99 — Version 1 : le Hub de départ.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

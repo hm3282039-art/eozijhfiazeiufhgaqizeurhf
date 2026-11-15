@@ -1,0 +1,16 @@
+# Dépendances (il n'y en a aucune pour le jeu, mais au cas où)
+node_modules/
+
+# Système
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Divers
+*.log
+.env

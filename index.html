@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Pet World 3D — un jeu de pets en 3D (Three.js) inspiré de Pet Simulator 99." />
+    <meta name="theme-color" content="#6cc4ff" />
+    <title>Pet World 3D — Zone 1 : Spawn</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/favicon.svg" />
+
+    <!-- Styles : un fichier par composant d'interface -->
+    <link rel="stylesheet" href="./styles/base.css" />
+    <link rel="stylesheet" href="./styles/hud.css" />
+    <link rel="stylesheet" href="./styles/components/loading-screen.css" />
+    <link rel="stylesheet" href="./styles/components/currency-bar.css" />
+    <link rel="stylesheet" href="./styles/components/zone-banner.css" />
+    <link rel="stylesheet" href="./styles/components/help-box.css" />
+    <link rel="stylesheet" href="./styles/components/action-bar.css" />
+    <link rel="stylesheet" href="./styles/components/toasts.css" />
+    <link rel="stylesheet" href="./styles/components/modal.css" />
+    <link rel="stylesheet" href="./styles/components/panels.css" />
+
+    <!-- Three.js + addons (OrbitControls, RoundedBoxGeometry, GLTFLoader…) depuis le CDN officiel -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <script src="./src/boot/loadFailureGuard.js"></script>
+    <script type="module" src="./src/main.js"></script>
+  </head>
+
+  <body>
+    <!-- Scène 3D -->
+    <canvas id="game-canvas" aria-label="Pet World 3D"></canvas>
+
+    <!-- Interface (construite par src/ui/HUD.js) -->
+    <div id="hud" class="hud"></div>
+
+    <!-- Écran de chargement (retiré par src/main.js quand le monde est prêt) -->
+    <div id="loading-screen" class="loading-screen" role="status" aria-live="polite">
+      <div class="loading-screen__paws" aria-hidden="true">
+        <span>🐾</span><span>🐾</span><span>🐾</span>
+      </div>
+      <h1 class="loading-screen__title">Pet World 3D</h1>
+      <p class="loading-screen__status" data-loading-status>Chargement du monde…</p>
+      <p class="loading-screen__details" data-loading-details></p>
+    </div>
+
+    <noscript>
+      <p class="noscript">Ce jeu a besoin de JavaScript pour fonctionner.</p>
+    </noscript>
+  </body>
+</html>

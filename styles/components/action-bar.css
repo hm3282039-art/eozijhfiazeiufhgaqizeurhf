@@ -1,0 +1,92 @@
+/* ==========================================================================
+   Barre d'actions (en bas) : gros boutons colorés façon PS99
+   bordure épaisse + ombre portée « dure » + reflet en haut du bouton
+   ========================================================================== */
+
+.action-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.1rem;
+}
+
+.action-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem 0.75rem;
+  border: 0.3rem solid var(--ink);
+  border-radius: 1.35rem;
+  box-shadow: 0 0.5rem 0 var(--ink), 0 0.9rem 1.2rem rgba(29, 33, 64, 0.28),
+    inset 0 0.28rem 0 rgba(255, 255, 255, 0.5), inset 0 -0.3rem 0 rgba(29, 33, 64, 0.16);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-shadow: var(--text-outline);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.09s ease, box-shadow 0.09s ease, filter 0.12s ease;
+}
+
+.action-btn:hover {
+  filter: brightness(1.08) saturate(1.08);
+  transform: translateY(-0.22rem);
+  box-shadow: 0 0.72rem 0 var(--ink), 0 1.1rem 1.4rem rgba(29, 33, 64, 0.3),
+    inset 0 0.28rem 0 rgba(255, 255, 255, 0.5), inset 0 -0.3rem 0 rgba(29, 33, 64, 0.16);
+}
+
+.action-btn:active {
+  transform: translateY(0.34rem);
+  box-shadow: 0 0.16rem 0 var(--ink), 0 0.3rem 0.5rem rgba(29, 33, 64, 0.25),
+    inset 0 0.28rem 0 rgba(255, 255, 255, 0.5), inset 0 -0.3rem 0 rgba(29, 33, 64, 0.16);
+}
+
+.action-btn:focus-visible {
+  outline: 0.25rem solid #fff;
+  outline-offset: 0.2rem;
+}
+
+.action-btn.is-bumping {
+  animation: bump 0.32s ease-out;
+}
+
+.action-btn__emoji {
+  font-size: 1.25em;
+  line-height: 1;
+  text-shadow: none;
+  filter: drop-shadow(0 0.14rem 0 rgba(29, 33, 64, 0.5));
+}
+
+.action-btn__count {
+  font-size: 0.86em;
+  font-variant-numeric: tabular-nums;
+}
+
+.action-btn--pets {
+  background: linear-gradient(var(--pink-1), var(--pink-2));
+}
+
+.action-btn--shop {
+  background: linear-gradient(var(--green-1), var(--green-2));
+}
+
+.action-btn--teleport {
+  background: linear-gradient(var(--blue-1), var(--blue-2));
+}
+
+/* Écrans très étroits (fenêtre réduite, téléphone en portrait) : boutons compacts. */
+@media (max-width: 600px) {
+  .action-bar {
+    gap: 0.5rem;
+  }
+
+  .action-btn {
+    gap: 0.3rem;
+    padding: 0.45rem 0.7rem 0.55rem;
+    border-width: 0.24rem;
+    border-radius: 1rem;
+    font-size: 1.02rem;
+  }
+}

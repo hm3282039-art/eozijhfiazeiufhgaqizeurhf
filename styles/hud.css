@@ -1,0 +1,71 @@
+/* ==========================================================================
+   HUD : disposition générale de l'interface par-dessus la scène 3D
+   ========================================================================== */
+
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  /* Le HUD laisse passer la souris vers le canvas ; seuls ses composants la captent. */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hud > * {
+  pointer-events: auto;
+}
+
+/* À gauche : monnaies */
+.hud > .currency-bar {
+  position: absolute;
+  left: var(--edge);
+  top: 42%;
+  transform: translateY(-50%);
+}
+
+/* En haut au centre : zone + notifications */
+.hud > .zone-banner {
+  position: absolute;
+  top: var(--edge);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.hud > .toasts {
+  position: absolute;
+  top: 4.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* En haut à droite : aide + boutons de test */
+.hud > .help-box {
+  position: absolute;
+  top: var(--edge);
+  right: var(--edge);
+}
+
+/* En bas : barre d'actions */
+.hud > .action-bar {
+  position: absolute;
+  bottom: calc(var(--edge) + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Écrans étroits : le bandeau de zone passe à gauche pour ne pas toucher la boîte d'aide,
+   et les notifications descendent juste au-dessus de la barre d'actions. */
+@media (max-width: 760px) {
+  .hud > .zone-banner {
+    left: var(--edge);
+    transform: none;
+  }
+
+  .hud > .toasts {
+    top: auto;
+    bottom: 6.6rem;
+    flex-direction: column-reverse;
+  }
+}

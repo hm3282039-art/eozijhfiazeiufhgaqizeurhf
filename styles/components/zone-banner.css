@@ -1,0 +1,28 @@
+/* ==========================================================================
+   Bandeau de zone (en haut au centre)
+   ========================================================================== */
+
+.zone-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 1.3rem 0.4rem 1rem;
+  border: var(--border);
+  border-radius: 999px;
+  background: linear-gradient(var(--green-1), var(--green-2));
+  box-shadow: var(--shadow-drop), inset 0 0.2rem 0 rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+.zone-banner__emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.zone-banner__name {
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: var(--text-outline);
+}

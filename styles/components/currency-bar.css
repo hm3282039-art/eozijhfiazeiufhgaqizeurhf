@@ -1,0 +1,65 @@
+/* ==========================================================================
+   Compteurs de monnaie (Pièces Jaunes, Diamants Bleus)
+   ========================================================================== */
+
+.currency-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.currency {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 11.2rem;
+  margin-left: 1.4rem;
+  padding: 0.3rem 1.1rem 0.3rem 2.75rem;
+  border: var(--border);
+  border-radius: 999px;
+  background: linear-gradient(#ffffff, #e6eeff);
+  box-shadow: var(--shadow-drop), inset 0 -0.2rem 0 rgba(29, 33, 64, 0.08);
+  transform-origin: left center;
+}
+
+.currency.is-bumping {
+  animation: bump 0.32s ease-out;
+}
+
+/* L'icône déborde à gauche de la pastille, comme dans PS99. */
+.currency__icon {
+  position: absolute;
+  left: -1.5rem;
+  top: 50%;
+  width: 3.9rem;
+  height: 3.9rem;
+  transform: translateY(-50%) rotate(-8deg);
+  filter: drop-shadow(0 0.2rem 0 rgba(29, 33, 64, 0.35));
+}
+
+.currency__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.currency__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.currency--coins .currency__label {
+  color: #b86a00;
+}
+
+.currency--diamonds .currency__label {
+  color: #0d68cf;
+}
+
+.currency__value {
+  font-size: 1.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

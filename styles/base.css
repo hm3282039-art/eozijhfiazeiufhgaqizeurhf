@@ -1,0 +1,186 @@
+/* ==========================================================================
+   Base : police, variables de design, remise à zéro, canvas 3D
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Fredoka';
+  src: url('../assets/fonts/Fredoka-Variable-Latin.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Typographie */
+  --font-game: 'Fredoka', 'Baloo 2', 'Nunito', 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+
+  /* Encre : contours épais, ombres portées et texte foncé */
+  --ink: #1d2140;
+  --ink-soft: #4a5078;
+
+  /* Couleurs « bonbon » (clair → foncé pour les dégradés) */
+  --pink-1: #ff9ad0;
+  --pink-2: #f2489f;
+  --green-1: #8be85f;
+  --green-2: #35b83c;
+  --blue-1: #6cd0ff;
+  --blue-2: #1f8ef0;
+  --yellow-1: #ffe36a;
+  --yellow-2: #ffb21f;
+  --purple-1: #c09bff;
+  --purple-2: #7c4dff;
+  --red-1: #ff8a8a;
+  --red-2: #f03e4e;
+  --orange-1: #ffc46b;
+  --orange-2: #ff8a1f;
+
+  --panel: #f4f8ff;
+  --panel-alt: #e4edff;
+
+  /* Contour de texte « cartoon » */
+  --text-outline: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink),
+    0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink), 0 4px 0 var(--ink);
+
+  --border: 0.25rem solid var(--ink);
+  --shadow-drop: 0 0.4rem 0 var(--ink);
+  --edge: 1rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Toute l'interface est en rem : elle garde les mêmes proportions du petit au grand écran. */
+  font-size: clamp(11px, 0.55vw + 0.75vh + 3px, 24px);
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #9bdcff;
+  color: var(--ink);
+  font-family: var(--font-game);
+  font-weight: 600;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+p,
+ul {
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ── Canvas 3D ─────────────────────────────────────────────────────────── */
+
+#game-canvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+#game-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.noscript {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: #9bdcff;
+  font-size: 1.5rem;
+  text-align: center;
+  z-index: 100;
+}
+
+/* ── Icônes SVG ────────────────────────────────────────────────────────── */
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  width: 1.5em;
+  height: 1.5em;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ── Petites étiquettes colorées ───────────────────────────────────────── */
+
+.tag {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border: 0.14rem solid var(--ink);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+}
+
+.tag--green {
+  background: var(--green-2);
+}
+
+.tag--blue {
+  background: var(--blue-2);
+}
+
+.tag--purple {
+  background: var(--purple-2);
+}
+
+/* ── Animation partagée : petit « pop » quand une valeur change ────────── */
+
+@keyframes bump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
