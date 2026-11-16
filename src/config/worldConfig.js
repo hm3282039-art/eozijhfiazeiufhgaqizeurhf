@@ -45,15 +45,31 @@ export const WORLD = Object.freeze({
    *                donc ici ENTRE le joueur et la caméra, pour une jolie « photo d'équipe ».
    */
   spawn: { x: -1.8, z: 29.4, yaw: 0.2, formationYaw: 0.2 + Math.PI },
+
+  /**
+   * Zone 2 : une seconde île au nord, reliée à la Zone 1 par la porte.
+   * Sa dalle (z jusqu'à −40) passe SOUS la pelouse de la Zone 1 : aucune couture visible,
+   * et la bordure de pierres de la Zone 1 (avec son ouverture à la porte) reste en place.
+   */
+  zone2: {
+    island: { minX: -30, maxX: 30, minZ: -96, maxZ: -40 },
+    /** Point d'arrivée de la téléportation (juste derrière la porte, face au nord). */
+    entrance: { x: 0, z: -48, yaw: Math.PI, formationYaw: 0 },
+    /** Socle du Coffre Boss Géant, au fond de la Zone 2. */
+    bossChest: { x: 0, z: -88 },
+    /** Ligne de séparation entre les deux zones (pour le bandeau de zone). */
+    boundaryZ: -42,
+  },
 });
 
 /** Rectangle dans lequel le joueur (et ses pets) peuvent se déplacer. */
 export function getWalkableBounds(margin = 0) {
   const { minX, maxX, minZ, maxZ, borderThickness } = WORLD.island;
+  const zone2 = WORLD.zone2.island;
   return {
-    minX: minX + borderThickness + margin,
-    maxX: maxX - borderThickness - margin,
-    minZ: minZ + borderThickness + margin,
-    maxZ: maxZ - borderThickness - margin,
+    minX: Math.min(minX, zone2.minX) + borderThickness + margin,
+    maxX: Math.max(maxX, zone2.maxX) - borderThickness - margin,
+    minZ: Math.min(minZ, zone2.minZ) + borderThickness + margin,
+    maxZ: Math.max(maxZ, zone2.maxZ) - borderThickness - margin,
   };
 }

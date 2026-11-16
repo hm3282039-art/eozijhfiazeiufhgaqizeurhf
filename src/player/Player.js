@@ -19,6 +19,8 @@ export class Player {
   yaw = 0;
   isGrounded = true;
   velocity = new THREE.Vector3();
+  /** Multiplicateur de vitesse de déplacement (panneau Admin : curseur 1–3). */
+  speedMultiplier = 1;
 
   #model;
   #animator;
@@ -79,7 +81,7 @@ export class Player {
 
     this.#animator.update(dt, {
       speed: this.speed,
-      maxSpeed: GAME_CONFIG.player.walkSpeed,
+      maxSpeed: GAME_CONFIG.player.walkSpeed * this.speedMultiplier,
       grounded: this.isGrounded,
       verticalVelocity: this.velocity.y,
       time,

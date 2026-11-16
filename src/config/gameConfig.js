@@ -93,4 +93,20 @@ export const GAME_CONFIG = Object.freeze({
     startCoins: 0,
     startDiamonds: 0,
   },
+
+  combat: {
+    /** Dégâts de base d'un coup de pet (avant multiplicateurs de variante / boost admin). */
+    baseDamage: 15,
+    /** Intervalle entre deux coups d'un même pet (s). */
+    hitInterval: 0.5,
+    /** Probabilité d'un coup critique (dégâts ×2). */
+    critChance: 0.1,
+    critMultiplier: 2,
+    /** Distance entre le centre du Breakable et le cercle d'attaque (en plus de son rayon). */
+    circleGap: 1.5,
+    /** Distance à laquelle un pet est considéré « en position » pour frapper. */
+    attackRange: 0.85,
+    /** Durée d'affichage de la barre de vie après le dernier coup (s). */
+    hpBarTimeout: 3,
+  },
 });

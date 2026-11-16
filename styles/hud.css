@@ -55,6 +55,13 @@
   transform: translateX(-50%);
 }
 
+/* Calque flottant : barres de vie des coffres + chiffres de dégâts */
+.hud > .floating-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 /* Écrans étroits : le bandeau de zone passe à gauche pour ne pas toucher la boîte d'aide,
    et les notifications descendent juste au-dessus de la barre d'actions. */
 @media (max-width: 760px) {

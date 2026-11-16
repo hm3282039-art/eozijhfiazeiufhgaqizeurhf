@@ -1,0 +1,216 @@
+/* ==========================================================================
+   Panneau Admin : fenêtre sombre « transparence », boutons de catégories
+   ========================================================================== */
+
+/* Le panneau Admin a son propre visuel : fond sombre et texte clair. */
+.modal--admin {
+  width: min(38rem, 100%);
+  background: linear-gradient(180deg, rgba(38, 44, 82, 0.96), rgba(18, 22, 48, 0.97));
+  color: #eef3ff;
+  box-shadow: 0 0.65rem 0 #10142e, 0 1.8rem 2.8rem rgba(4, 8, 30, 0.55);
+}
+
+.modal--admin .modal__header {
+  border-bottom: 0.32rem solid #ffd94d;
+  background: linear-gradient(#ffd94d, #ff9a1f);
+  color: #2a2030;
+}
+
+.modal--admin .modal__title,
+.modal--admin .modal__close {
+  color: var(--ink);
+}
+
+.modal--admin .modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* ── Catégories ───────────────────────────────────────────────────────── */
+
+.admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1.2rem;
+  border: 0.24rem solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.admin-section__title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0.14rem rgba(0, 0, 0, 0.4);
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.7rem;
+}
+
+/* ── Boutons par catégorie (couleurs vives « PS99 ») ──────────────────── */
+
+.admin-btn {
+  padding: 0.55rem 0.75rem;
+  border: 0.22rem solid rgba(255, 255, 255, 0.6);
+  border-radius: 0.95rem;
+  color: #fff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+  text-shadow: var(--text-outline);
+  transition: transform 0.09s ease, filter 0.12s ease;
+}
+
+.admin-btn:hover {
+  filter: brightness(1.12) saturate(1.1);
+  transform: translateY(-0.16rem);
+}
+
+.admin-btn:active {
+  transform: translateY(0.14rem);
+}
+
+.admin-btn:focus-visible {
+  outline: 0.2rem solid #fff;
+  outline-offset: 0.12rem;
+}
+
+.admin-btn--gold {
+  background: linear-gradient(#ffe06a, #f0a01f);
+  color: #4a3000;
+}
+
+.admin-btn--gold,
+.admin-btn--diamond {
+  text-shadow: 0 0.14rem 0 rgba(40, 30, 10, 0.4);
+}
+
+.admin-btn--diamond {
+  background: linear-gradient(#9fe6ff, #2f9ef0);
+}
+
+.admin-btn--pet {
+  background: linear-gradient(#ff9ad0, #f2489f);
+}
+
+.admin-btn--rainbow {
+  background: linear-gradient(#c09bff, #f2489f 45%, #ffb21f);
+}
+
+.admin-btn--world {
+  background: linear-gradient(#8be85f, #35b83c);
+}
+
+.admin-btn--danger {
+  background: linear-gradient(#ff8a8a, #f03e4e);
+}
+
+.admin-btn--utility {
+  background: linear-gradient(#a5b3ff, #5a5fd0);
+}
+
+/* Boutons bascules (Boost / Ambiance) : état actif. */
+.admin-btn[aria-pressed='true'] {
+  border-color: #fff;
+  box-shadow: inset 0 0 0 0.2rem rgba(255, 255, 255, 0.7), 0 0.24rem 0 rgba(0, 0, 0, 0.35);
+}
+
+.admin-btn.is-active {
+  filter: brightness(1.05);
+  border-color: #fff;
+  box-shadow: 0 0 0.26rem 0 rgba(255, 255, 255, 0.6);
+}
+
+/* ── Sliders ─────────────────────────────────────────────────────────── */
+
+.admin-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.admin-slider__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.admin-slider__label strong {
+  font-variant-numeric: tabular-nums;
+  padding: 0.05rem 0.5rem;
+  border-radius: 0.6rem;
+  background: rgba(255, 217, 77, 0.22);
+  color: #ffd94d;
+}
+
+.admin-slider input[type='range'] {
+  width: 100%;
+  accent-color: #ffd94d;
+  cursor: pointer;
+}
+
+/* ── Bouton d'entrée (en haut à droite du HUD) ───────────────────────── */
+
+.hud > .admin-button {
+  position: absolute;
+  top: calc(var(--edge) + 8.6rem);
+  right: var(--edge);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.05rem;
+  border: 0.26rem solid var(--ink);
+  border-radius: 1.3rem;
+  background: linear-gradient(#a5b3ff, #5a5fd0);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.1;
+  cursor: pointer;
+  box-shadow: 0 0.45rem 0 var(--ink), 0 0.7rem 1rem rgba(29, 33, 64, 0.3), inset 0 0.26rem 0 rgba(255, 255, 255, 0.4);
+  text-shadow: var(--text-outline);
+  transition: transform 0.09s ease, box-shadow 0.09s ease, filter 0.12s ease;
+}
+
+.admin-button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-0.2rem);
+  box-shadow: 0 0.65rem 0 var(--ink), 0 0.9rem 1.2rem rgba(29, 33, 64, 0.35),
+    inset 0 0.26rem 0 rgba(255, 255, 255, 0.4);
+}
+
+.admin-button:active {
+  transform: translateY(0.16rem);
+  box-shadow: 0 0.16rem 0 var(--ink), inset 0 0.26rem 0 rgba(255, 255, 255, 0.4);
+}
+
+.admin-button:focus-visible {
+  outline: 0.2rem solid #fff;
+  outline-offset: 0.12rem;
+}
+
+.admin-button__emoji {
+  font-size: 1.4rem;
+  filter: drop-shadow(0 0.08rem rgba(0, 0, 0, 0.35));
+}
+
+/* Écrans étroits : le bouton Admin passe sous la boîte d'aide (qui s'affine). */
+@media (max-width: 760px) {
+  .hud > .admin-button {
+    top: auto;
+    bottom: calc(var(--edge) + 6.6rem);
+    right: 50%;
+    transform: translateX(50%);
+  }
+}

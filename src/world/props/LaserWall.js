@@ -163,22 +163,43 @@ export function createLaserWall({ width, height }) {
   padlock.renderOrder = 4;
   group.add(padlock);
 
-  const update = (_dt, time) => {
+  /** 1 = mur actif, 0 = éteint (déverrouillé). */
+  let power = 1;
+  let unlocking = false;
+
+  const update = (dt, time) => {
+    // Extinction progressive après le déverrouillage.
+    if (unlocking) power = Math.max(0, power - dt * 1.4);
+    group.visible = power > 0.01;
+
     scanTexture.offset.y = -time * 0.35;
-    veil.material.opacity = 0.27 + Math.sin(time * 2.4) * 0.06;
-    scanlines.material.opacity = 0.65 + Math.sin(time * 3.1 + 1) * 0.15;
+    veil.material.opacity = (0.27 + Math.sin(time * 2.4) * 0.06) * power;
+    scanlines.material.opacity = (0.65 + Math.sin(time * 3.1 + 1) * 0.15) * power;
 
     beams.forEach((beam, index) => {
       const flicker = 1 + Math.sin(time * 9 + index * 1.7) * 0.18;
-      beam.scale.x = flicker;
-      beam.scale.z = flicker;
+      beam.scale.x = flicker * power;
+      beam.scale.z = flicker * power;
     });
 
     padlock.position.y = height * 0.5 + Math.sin(time * 1.8) * 0.14;
     const pulse = 2.3 + Math.sin(time * 3.6) * 0.1;
-    padlock.scale.setScalar(pulse);
+    padlock.scale.setScalar(pulse * Math.max(power, 0.001));
+    padlock.material.opacity = power;
   };
 
   update(0, 0);
-  return { object3D: group, update };
+  return {
+    object3D: group,
+    update,
+    /** Le cadenas (cible de clic pour déverrouiller). */
+    padlock,
+    /** Éteint le mur (porte déverrouillée). */
+    unlock() {
+      unlocking = true;
+    },
+    get unlocked() {
+      return power === 0;
+    },
+  };
 }

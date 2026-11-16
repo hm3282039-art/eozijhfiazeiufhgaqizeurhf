@@ -5,6 +5,8 @@ import * as THREE from 'three';
  * C'est ce rendu doux (façon Blender / Roblox) qui donne le style PS99.
  */
 const TOY_DEFAULTS = { roughness: 0.62, metalness: 0 };
+/** Rendu « plastique brillant » façon PS99 : reflets nets, couleurs vibrantes. */
+const GLOSSY_DEFAULTS = { roughness: 0.25, metalness: 0.1 };
 
 const cache = new Map();
 
@@ -17,6 +19,40 @@ export function toyMaterial(color, options = {}) {
   let material = cache.get(key);
   if (!material) {
     material = new THREE.MeshStandardMaterial({ color, ...TOY_DEFAULTS, ...options });
+    cache.set(key, material);
+  }
+  return material;
+}
+
+/**
+ * Matériau « Toy Glossy » PARTAGÉ : plastique brillant (roughness 0.25, metalness 0.1).
+ * Utilisé pour les pets, les pièces et les coffres — le rendu vibrant de PS99.
+ */
+export function glossyMaterial(color, options = {}) {
+  const key = `glossy|${color}|${JSON.stringify(options)}`;
+  let material = cache.get(key);
+  if (!material) {
+    material = new THREE.MeshStandardMaterial({ color, ...GLOSSY_DEFAULTS, ...options });
+    cache.set(key, material);
+  }
+  return material;
+}
+
+/** Or brillant PARTAGÉ (clearcoat) : pièces, coffres, couronnes, pets dorés. */
+export function goldMaterial(options = {}) {
+  const key = `gold|${JSON.stringify(options)}`;
+  let material = cache.get(key);
+  if (!material) {
+    material = new THREE.MeshPhysicalMaterial({
+      color: '#ffc93c',
+      metalness: 0.55,
+      roughness: 0.24,
+      clearcoat: 0.85,
+      clearcoatRoughness: 0.22,
+      emissive: '#6a4200',
+      emissiveIntensity: 0.22,
+      ...options,
+    });
     cache.set(key, material);
   }
   return material;

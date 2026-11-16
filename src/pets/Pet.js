@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PET_VARIANTS_VISUAL, normalizeVariant } from '../config/variantConfig.js';
 import { BlobShadow } from '../graphics/BlobShadow.js';
 import { PetLabel } from './PetLabel.js';
 import { loadPetModel } from './PetModelLoader.js';
@@ -13,6 +14,7 @@ import { buildProceduralPet } from './procedural/ProceduralPetBuilder.js';
  * @property {number} height                      hauteur totale (pour placer l'étiquette)
  * @property {HTMLCanvasElement} [portrait]       dessin du visage (vignette du panneau « Pets »)
  * @property {(pose: import('./procedural/species/index.js').PartPose) => void} update
+ * @property {(dt: number, time: number) => void} [updateVariant]  variantes doré / arc-en-ciel
  * @property {(closed: boolean) => void} [setEyesClosed]  clignement (pets procéduraux)
  * @property {() => void} dispose
  */
@@ -51,15 +53,19 @@ export class Pet {
    *   name?: string,
    *   palette?: import('./procedural/species/index.js').PetPalette,
    *   modelUrl?: string | null,
+   *   variant?: string,   'normal' | 'golden' | 'rainbow' | 'huge' (voir `config/variantConfig.js`)
    *   isTest?: boolean,
    * }} config
    */
-  constructor({ species, name, palette, modelUrl, isTest = false }) {
+  constructor({ species, name, palette, modelUrl, variant, isTest = false }) {
     this.id = nextId++;
     this.species = species;
     this.name = name ?? species.name;
     this.palette = palette ?? species.palette;
     this.modelUrl = modelUrl !== undefined ? modelUrl : species.modelUrl;
+    this.variant = normalizeVariant(variant);
+    /** Multiplicateur de dégâts lié à la variante (doré ×3, arc-en-ciel ×5, HUGE ×2). */
+    this.damageMultiplier = PET_VARIANTS_VISUAL[this.variant].damageMultiplier;
     this.isTest = isTest;
 
     this.object3D = new THREE.Group();
@@ -88,6 +94,11 @@ export class Pet {
     return this.visual?.kind ?? null;
   }
 
+  /** Anime la variante visuelle (couleurs arc-en-ciel, étincelles dorées…). */
+  updateVariant(dt, time) {
+    this.visual?.updateVariant?.(dt, time);
+  }
+
   dispose() {
     this.#disposed = true;
     this.object3D.removeFromParent();
@@ -102,7 +113,7 @@ export class Pet {
     // A. Modèle Blender (.glb)
     if (this.modelUrl) {
       try {
-        visual = await loadPetModel(this.modelUrl, { rotationY: this.species.modelRotationY ?? 0 });
+        visual = await loadPetModel(this.modelUrl, { rotationY: this.species.modelRotationY ?? 0, variant: this.variant });
       } catch (error) {
         console.warn(
           `[Pet] Modèle « ${this.modelUrl} » introuvable ou invalide pour ${this.name} → générateur procédural.`,
@@ -112,7 +123,7 @@ export class Pet {
     }
 
     // B. Générateur procédural (par défaut, ou en secours)
-    visual ??= buildProceduralPet({ builder: this.species.builder, palette: this.palette });
+    visual ??= buildProceduralPet({ builder: this.species.builder, palette: this.palette, variant: this.variant });
 
     if (this.#disposed) {
       visual.dispose();

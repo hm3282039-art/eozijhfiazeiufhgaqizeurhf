@@ -4,21 +4,37 @@ import { PET_SPECIES } from '../config/petSpecies.js';
 import { EVENTS } from '../core/EventBus.js';
 import { PetAnimator } from './animation/PetAnimator.js';
 import { DEFAULT_PET_ANIMATION, PET_ANIMATION_STYLES } from './animation/petAnimationStyles.js';
+import { CombatFormation } from './CombatFormation.js';
 import { Pet } from './Pet.js';
 import { PetFormation } from './PetFormation.js';
 import { PetMovement } from './PetMovement.js';
 
+const COMBAT = GAME_CONFIG.combat;
+
 /**
- * L'équipe de pets du joueur : création / suppression, formation, déplacement et animation.
+ * L'équipe de pets du joueur : création / suppression, formation, déplacement, animation…
+ * …et mode « combat » : quand un Breakable est ciblé, les pets l'entourent en cercle
+ * et le frappent à intervalles réguliers (voir `setTarget`).
  */
 export class PetManager {
   #events;
   #collision;
   #formation = new PetFormation();
-  /** @type {{ pet: Pet, movement: PetMovement, animator: PetAnimator }[]} */
+  #combatFormation = new CombatFormation();
+  /** @type {{ pet: Pet, movement: PetMovement, animator: PetAnimator, attackCooldown: number }[]} */
   #members = [];
   #animationStyle = DEFAULT_PET_ANIMATION;
   #createdCount = 0;
+  #target = null;
+  #damageBoostEnabled = false;
+  #sizeMultiplier = 1;
+
+  /**
+   * Appelé à chaque coup porté par un pet : `(pet, breakable) => void`.
+   * Assigné par le jeu (qui relie les pets au système de Breakables).
+   * @type {((pet: Pet, breakable: object) => void) | null}
+   */
+  onPetHit = null;
 
   /**
    * @param {{
@@ -57,6 +73,26 @@ export class PetManager {
     return this.#animationStyle;
   }
 
+  /** Le Breakable actuellement attaqué par l'équipe (`null` = formation derrière le joueur). */
+  get target() {
+    return this.#target;
+  }
+
+  /** Multiplicateur global de dégâts (panneau Admin : boost ×10). */
+  get damageBoost() {
+    return this.#damageBoostEnabled ? 10 : 1;
+  }
+
+  /** État booléen du boost (OFF / ×10). */
+  get damageBoostEnabled() {
+    return this.#damageBoostEnabled;
+  }
+
+  /** Multiplicateur global de taille des pets (panneau Admin : curseur 0,5–3). */
+  get sizeMultiplier() {
+    return this.#sizeMultiplier;
+  }
+
   /**
    * Crée un pet et l'ajoute à l'équipe.
    *
@@ -65,6 +101,7 @@ export class PetManager {
    *   name?: string,
    *   palette?: object,
    *   modelUrl?: string | null,   remplace le `modelUrl` de l'espèce (un .glb, ou `null` pour forcer le procédural)
+   *   variant?: string,           'normal' | 'golden' | 'rainbow' | 'huge'
    *   isTest?: boolean,
    * }} config
    * @param {{ at?: { x: number, z: number }, animate?: boolean }} [options]
@@ -82,10 +119,12 @@ export class PetManager {
       pet,
       movement: new PetMovement(pet, this.#collision),
       animator: new PetAnimator(pet, this.#createdCount++),
+      attackCooldown: 0,
     };
 
     // Le pet rejoint tout de suite la formation (invisible tant qu'il n'est pas prêt).
     pet.object3D.visible = false;
+    pet.object3D.scale.setScalar(this.#sizeMultiplier);
     if (at) member.movement.snapTo(at.x, at.z, this.#formation.heading);
     this.#members.push(member);
     this.object3D.add(pet.object3D);
@@ -140,6 +179,35 @@ export class PetManager {
     });
   }
 
+  // ── Combat ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Cible les pets sur un Breakable (ils quittent la formation et l'entourent),
+   * ou annule la cible (`null` : retour à la formation derrière le joueur).
+   * @param {{ alive: boolean } | null} breakable
+   */
+  setTarget(breakable) {
+    this.#target = breakable && breakable.alive ? breakable : null;
+    for (const member of this.#members) member.attackCooldown = 0;
+  }
+
+  /** Dégâts d'un coup de ce pet (base × variante × boost Admin). */
+  petDamage(pet) {
+    return COMBAT.baseDamage * pet.damageMultiplier * this.damageBoost;
+  }
+
+  /** Active / désactive le boost de dégâts ×10 (panneau Admin). @returns {boolean} le nouvel état */
+  setDamageBoost(enabled) {
+    this.#damageBoostEnabled = !!enabled;
+    return this.#damageBoostEnabled;
+  }
+
+  /** Taille globale des pets (panneau Admin : curseur 0,5–3). */
+  setSizeMultiplier(multiplier) {
+    this.#sizeMultiplier = multiplier;
+    for (const { pet } of this.#members) pet.object3D.scale.setScalar(multiplier);
+  }
+
   /**
    * @param {number} dt
    * @param {number} time
@@ -147,14 +215,41 @@ export class PetManager {
    */
   update(dt, time, player) {
     const members = this.#members;
-    const slots = this.#formation.update(dt, player, this.count);
+    const target = this.#target && this.#target.alive ? this.#target : null;
+    if (!target) this.#target = null;
+
+    const slots = target
+      ? this.#combatFormation.update(target, this.count)
+      : this.#formation.update(dt, player, this.count);
 
     for (let i = 0; i < members.length; i++) members[i].movement.advance(dt, slots[i]);
     this.#separate();
-    for (const { movement, animator } of members) {
-      movement.finish(dt, player.yaw);
+    for (let i = 0; i < members.length; i++) {
+      const member = members[i];
+      const { movement, animator, pet } = member;
+      // En combat, les pets regardent la cible une fois en place ; sinon, comme le joueur.
+      const idleYaw = target
+        ? Math.atan2(target.position.x - pet.position.x, target.position.z - pet.position.z)
+        : player.yaw;
+      movement.finish(dt, idleYaw);
       animator.update(dt, time, this.#animationStyle);
+      pet.updateVariant(dt, time);
+      if (target) this.#updateAttack(member, target, slots[i], dt);
     }
+  }
+
+  /** Un pet en position frappe sa cible toutes les `hitInterval` secondes. */
+  #updateAttack(member, target, slot, dt) {
+    member.attackCooldown -= dt;
+    if (member.attackCooldown > 0) return;
+
+    const pet = member.pet;
+    const distance = Math.hypot(pet.position.x - slot.x, pet.position.z - slot.z);
+    if (distance > COMBAT.attackRange) return;
+
+    member.attackCooldown = COMBAT.hitInterval;
+    member.animator.punch();
+    this.onPetHit?.(pet, target);
   }
 
   /**

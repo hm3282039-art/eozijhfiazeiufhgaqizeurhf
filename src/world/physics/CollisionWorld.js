@@ -20,6 +20,17 @@ export class CollisionWorld {
     this.bounds = bounds;
   }
 
+  /** Tous les colliders (cercles + rectangles) — utile pour le débogage. */
+  get colliders() {
+    return [...this.#circles, ...this.#boxes];
+  }
+
+  /** Retire tous les colliders portant cette étiquette (ex : le mur laser une fois la porte ouverte). */
+  removeByTag(tag) {
+    this.#circles = this.#circles.filter((collider) => collider.tag !== tag);
+    this.#boxes = this.#boxes.filter((collider) => collider.tag !== tag);
+  }
+
   /** @param {CircleCollider | BoxCollider} collider */
   add(collider) {
     if (collider.type === 'circle') this.#circles.push(collider);

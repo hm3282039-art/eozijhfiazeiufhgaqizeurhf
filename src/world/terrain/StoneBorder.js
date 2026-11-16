@@ -11,13 +11,19 @@ const INSET = 0.7;
 const SINK = 0.55;
 
 /**
- * Bordure de l'île : une rangée de grosses pierres grises arrondies, de tailles variées,
- * avec quelques pierres plus petites posées par-dessus. Elle s'interrompt devant la porte.
+ * Bordure d'île : une rangée de grosses pierres grises arrondies, de tailles variées,
+ * avec quelques pierres plus petites posées par-dessus.
+ *
+ * @param {{ minX: number, maxX: number, minZ: number, maxZ: number }} bounds limites de la pelouse
+ * @param {{
+ *   gateGap?: { center: number, halfWidth: number } | null,   ouverture sur le côté nord (la porte)
+ *   edges?: ('north' | 'south' | 'west' | 'east')[],          côtés à border (défaut : les 4)
+ *   seed?: number,
+ * }} [options]
  */
-export function createStoneBorder() {
-  const { minX, maxX, minZ, maxZ } = WORLD.island;
-  const { halfOpening, pillarSize } = WORLD.gate;
-  const rng = createRng(1337);
+export function createStoneBorder(bounds = WORLD.island, { gateGap = null, edges = ['north', 'south', 'west', 'east'], seed = 1337 } = {}) {
+  const { minX, maxX, minZ, maxZ } = bounds;
+  const rng = createRng(seed);
   const stones = [];
 
   /**
@@ -53,17 +59,22 @@ export function createStoneBorder() {
     }
   };
 
-  const gateClear = halfOpening + pillarSize + 0.15;
   const north = minZ + INSET;
   const south = maxZ - INSET;
   const west = minX + INSET;
   const east = maxX - INSET;
 
-  addRow(minX - 0.4, -gateClear, (along, across) => [along, north + across], 0);
-  addRow(gateClear, maxX + 0.4, (along, across) => [along, north + across], 0);
-  addRow(minX - 0.4, maxX + 0.4, (along, across) => [along, south + across], 0);
-  addRow(minZ + 1.6, maxZ - 1.6, (along, across) => [west + across, along], Math.PI / 2);
-  addRow(minZ + 1.6, maxZ - 1.6, (along, across) => [east + across, along], Math.PI / 2);
+  if (edges.includes('north')) {
+    if (gateGap) {
+      addRow(minX - 0.4, gateGap.center - gateGap.halfWidth, (along, across) => [along, north + across], 0);
+      addRow(gateGap.center + gateGap.halfWidth, maxX + 0.4, (along, across) => [along, north + across], 0);
+    } else {
+      addRow(minX - 0.4, maxX + 0.4, (along, across) => [along, north + across], 0);
+    }
+  }
+  if (edges.includes('south')) addRow(minX - 0.4, maxX + 0.4, (along, across) => [along, south + across], 0);
+  if (edges.includes('west')) addRow(minZ + 1.6, maxZ - 1.6, (along, across) => [west + across, along], Math.PI / 2);
+  if (edges.includes('east')) addRow(minZ + 1.6, maxZ - 1.6, (along, across) => [east + across, along], Math.PI / 2);
 
   const mesh = new THREE.InstancedMesh(
     roundedBoxGeometry(1, 1, 1, 0.24, 2),

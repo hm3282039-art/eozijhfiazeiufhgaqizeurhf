@@ -34,5 +34,6 @@ export const EVENTS = Object.freeze({
   PET_ANIMATION_CHANGED: 'pets:animation-changed',
   PLAYER_TELEPORTED: 'player:teleported',
   GATE_BLOCKED: 'gate:blocked',
+  ZONE_UNLOCKED: 'zone:unlocked',
   TOAST: 'ui:toast',
 });

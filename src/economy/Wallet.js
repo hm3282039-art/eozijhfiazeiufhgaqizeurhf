@@ -54,6 +54,25 @@ export class Wallet {
    * Dépense un montant si le solde le permet.
    * @returns {boolean} `true` si le paiement a eu lieu
    */
+  /** Définit directement le solde d'une monnaie (panneau Admin). */
+  set(currency, amount) {
+    this.#assertCurrency(currency);
+    this.#balances[currency] = Math.max(0, Math.floor(amount));
+    this.#emit(currency);
+  }
+
+  /** Remet les deux monnaies à zéro (panneau Admin). */
+  reset() {
+    this.#balances.coins = 0;
+    this.#balances.diamonds = 0;
+    this.#emit('coins');
+    this.#emit('diamonds');
+  }
+
+  /**
+   * Dépense un montant si le solde le permet.
+   * @returns {boolean} `true` si le paiement a eu lieu
+   */
   spend(currency, amount) {
     if (!this.canAfford(currency, amount)) return false;
     this.#balances[currency] -= amount;

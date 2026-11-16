@@ -27,7 +27,7 @@ function createLawn(width, length) {
 }
 
 /** Gros bloc de roche arrondi qui porte la pelouse et plonge dans l'eau. */
-function createCliffBody(width, length, height) {
+export function createCliffBody(width, length, height) {
   const geometry = new RoundedBoxGeometry(width + LEDGE * 2, height, length + LEDGE * 2, 5, 2.4);
   const body = new THREE.Mesh(geometry, toyMaterial(PALETTE.stone.cliff, { roughness: 0.92 }));
   body.name = 'CliffBody';
@@ -37,7 +37,7 @@ function createCliffBody(width, length, height) {
 }
 
 /** Rochers arrondis accrochés aux flancs de la falaise, pour casser la silhouette du bloc. */
-function createCliffRocks(width, length, height) {
+export function createCliffRocks(width, length, height) {
   const rng = createRng(404);
   const tones = [PALETTE.stone.base, PALETTE.stone.dark, PALETTE.stone.cliff, PALETTE.stone.light]
     .map((hex) => new THREE.Color(hex));

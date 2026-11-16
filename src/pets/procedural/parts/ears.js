@@ -1,5 +1,5 @@
 import { capsuleGeometry, softConeGeometry } from '../../../graphics/geometries.js';
-import { toyMaterial } from '../../../graphics/materials.js';
+import { glossyMaterial } from '../../../graphics/materials.js';
 import { BODY_HALF_WIDTH, BODY_TOP_Y } from '../petAnatomy.js';
 import { partMesh, pivot } from './partUtils.js';
 
@@ -12,8 +12,8 @@ export function createCatEars(palette) {
   const group = pivot('Ears');
   const outerGeometry = softConeGeometry(0.25, 0.44, 0.075);
   const innerGeometry = softConeGeometry(0.155, 0.29, 0.05);
-  const outerMaterial = toyMaterial(palette.body);
-  const innerMaterial = toyMaterial(palette.accent);
+  const outerMaterial = glossyMaterial(palette.body);
+  const innerMaterial = glossyMaterial(palette.accent);
 
   const ears = [-1, 1].map((side) => {
     const ear = pivot(side < 0 ? 'EarLeft' : 'EarRight', side * 0.35, BODY_TOP_Y - 0.085, 0.05);
@@ -44,7 +44,7 @@ export function createCatEars(palette) {
 export function createDogEars(palette) {
   const group = pivot('Ears');
   const geometry = capsuleGeometry(0.19, 0.3, 16);
-  const material = toyMaterial(palette.accent);
+  const material = glossyMaterial(palette.accent);
 
   const ears = [-1, 1].map((side) => {
     const ear = pivot(side < 0 ? 'EarLeft' : 'EarRight', side * (BODY_HALF_WIDTH + 0.015), BODY_TOP_Y - 0.17, 0.1);

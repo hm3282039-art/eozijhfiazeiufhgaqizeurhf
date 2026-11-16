@@ -1,11 +1,11 @@
 import { softConeGeometry } from '../../../graphics/geometries.js';
-import { toyMaterial } from '../../../graphics/materials.js';
+import { glossyMaterial } from '../../../graphics/materials.js';
 import { BODY_TOP_Y } from '../petAnatomy.js';
 import { partMesh, pivot } from './partUtils.js';
 
 /** Matériau « or poli » des cornes et des piques. */
 function goldMaterial(color) {
-  return toyMaterial(color, { roughness: 0.32, emissive: '#7a4a00', emissiveIntensity: 0.35 });
+  return glossyMaterial(color, { roughness: 0.32, emissive: '#7a4a00', emissiveIntensity: 0.35 });
 }
 
 /**

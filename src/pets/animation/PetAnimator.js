@@ -18,6 +18,7 @@ export class PetAnimator {
   #phase;
   #timeOffset;
   #moveBlend = 0;
+  #attackPulse = 0;
   #spawnTime = 0;
   #blinkTimer;
   #eyesClosed = false;
@@ -44,6 +45,11 @@ export class PetAnimator {
     this.#spawnTime = Infinity;
   }
 
+  /** Le pet frappe sa cible : petit saut + inclinaison vers l'avant. */
+  punch() {
+    this.#attackPulse = 1;
+  }
+
   /**
    * @param {number} dt
    * @param {number} time temps de jeu (s)
@@ -67,12 +73,20 @@ export class PetAnimator {
     // ── Repos : respiration ─────────────────────────────────────────────────
     const breath = Math.sin(localTime * CONFIG.idle.breathSpeed) * CONFIG.idle.breathAmount * (1 - move);
 
-    const lift = motion.y * move;
+    // Coup de poing (combat) : impulsion qui retombe vite, en plus du saut de déplacement.
+    this.#attackPulse = Math.max(0, this.#attackPulse - dt * 3.2);
+    const attackLift = Math.sin(this.#attackPulse * Math.PI) * 0.42;
+
+    const lift = motion.y * move + attackLift;
     const stretch = motion.stretch * move + breath;
     const spawn = this.#updateSpawn(dt);
 
     root.position.y = lift;
-    root.rotation.set(motion.tiltX * move, motion.spinY * move, motion.tiltZ * move);
+    root.rotation.set(
+      motion.tiltX * move + this.#attackPulse * 0.35,
+      motion.spinY * move,
+      motion.tiltZ * move,
+    );
     root.scale.set(
       (1 - stretch * 0.5) * spawn,
       (1 + stretch) * spawn,

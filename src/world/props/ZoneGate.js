@@ -173,6 +173,9 @@ export function createZoneGate({ halfOpening, pillarSize, height, price, label }
     for (const orb of orbs) orb.scale.setScalar(pulse);
   };
 
+  /** Éteint le mur laser (porte déverrouillée). */
+  const unlock = () => laser.unlock();
+
   const pillarHalf = pillarSize / 2 + 0.3;
   const colliders = [
     { type: 'box', minX: -pillarX - pillarHalf, maxX: -pillarX + pillarHalf, minZ: -pillarHalf, maxZ: pillarHalf },
@@ -180,5 +183,15 @@ export function createZoneGate({ halfOpening, pillarSize, height, price, label }
     { type: 'box', minX: -halfOpening, maxX: halfOpening, minZ: -0.3, maxZ: 0.3, tag: 'gate-laser' },
   ];
 
-  return { object3D: group, update, colliders };
+  return {
+    object3D: group,
+    update,
+    colliders,
+    unlock,
+    get unlocked() {
+      return laser.unlocked;
+    },
+    /** Cibles de clic pour tenter le déverrouillage (cadenas + panneau). */
+    lockTargets: [laser.padlock, board, face],
+  };
 }

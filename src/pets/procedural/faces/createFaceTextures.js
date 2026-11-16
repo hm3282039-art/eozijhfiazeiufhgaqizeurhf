@@ -28,6 +28,17 @@ function paintFace(painter, palette, { width, closed }) {
 }
 
 /**
+ * Dessine une texture de visage NON mise en cache (pour les pets « Rainbow », dont la
+ * couleur change en continu : la texture est redessinée au fil des teintes).
+ * @param {import('../species/index.js').FacePainter} painter
+ * @param {import('../species/index.js').PetPalette} palette
+ * @param {{ width?: number, closed?: boolean }} [options]
+ */
+export function paintFaceTexture(painter, palette, { width = GAME_CONFIG.pets.faceTextureWidth, closed = false } = {}) {
+  return paintFace(painter, palette, { width, closed });
+}
+
+/**
  * Crée (ou réutilise) les textures de visage d'un pet.
  *
  * @param {string} key identifiant de l'espèce (pour le cache)

@@ -47,9 +47,10 @@ export class PlayerController {
     const hasInput = move.x !== 0 || move.y !== 0;
 
     // ── Vitesse horizontale (accélération douce, plus « flottante » en l'air) ─
+    const maxSpeed = CONFIG.walkSpeed * (player.speedMultiplier ?? 1);
     const acceleration = player.isGrounded ? CONFIG.groundAcceleration : CONFIG.airAcceleration;
-    velocity.x = damp(velocity.x, dirX * CONFIG.walkSpeed, acceleration, dt);
-    velocity.z = damp(velocity.z, dirZ * CONFIG.walkSpeed, acceleration, dt);
+    velocity.x = damp(velocity.x, dirX * maxSpeed, acceleration, dt);
+    velocity.z = damp(velocity.z, dirZ * maxSpeed, acceleration, dt);
 
     // ── Rotation progressive vers la direction du mouvement ──────────────────
     if (hasInput) {

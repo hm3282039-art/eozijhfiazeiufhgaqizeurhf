@@ -21,6 +21,7 @@ export class Lighting {
   #snapInverse = new THREE.Quaternion();
   #texelSize;
   #scratch = new THREE.Vector3();
+  #target;
 
   constructor() {
     const { shadowMapSize, shadowRange } = GAME_CONFIG.renderer;
@@ -61,15 +62,48 @@ export class Lighting {
     this.#texelSize = (shadowRange * 2) / shadowMapSize;
 
     this.#follow(new THREE.Vector3());
+
+    /** Ambiance visée et valeurs actuelles (glissement doux dans `update`). */
+    this.#target = {
+      sunColor: new THREE.Color(PALETTE.moods.day.sun),
+      sunIntensity: PALETTE.moods.day.sunIntensity,
+      hemisphereSky: new THREE.Color(PALETTE.moods.day.hemisphereSky),
+      hemisphereGround: new THREE.Color(PALETTE.moods.day.hemisphereGround),
+      hemisphereIntensity: PALETTE.moods.day.hemisphereIntensity,
+      fillColor: new THREE.Color(PALETTE.moods.day.fill),
+      fillIntensity: PALETTE.moods.day.fillIntensity,
+    };
+  }
+
+  /** Bascule l'ambiance (jour / coucher de soleil doré). */
+  setMood(mood) {
+    const palette = PALETTE.moods[mood] ?? PALETTE.moods.day;
+    this.#target.sunColor.set(palette.sun);
+    this.#target.sunIntensity = palette.sunIntensity;
+    this.#target.hemisphereSky.set(palette.hemisphereSky);
+    this.#target.hemisphereGround.set(palette.hemisphereGround);
+    this.#target.hemisphereIntensity = palette.hemisphereIntensity;
+    this.#target.fillColor.set(palette.fill);
+    this.#target.fillIntensity = palette.fillIntensity;
   }
 
   /**
-   * @param {number} _dt
+   * @param {number} dt
    * @param {number} _time
    * @param {THREE.Vector3} focus position du joueur
    */
-  update(_dt, _time, focus) {
+  update(dt, _time, focus) {
     if (focus) this.#follow(focus);
+
+    // Glissement doux vers l'ambiance visée.
+    const t = Math.min(1, dt * 1.6);
+    this.sun.color.lerp(this.#target.sunColor, t);
+    this.sun.intensity += (this.#target.sunIntensity - this.sun.intensity) * t;
+    this.hemisphere.color.lerp(this.#target.hemisphereSky, t);
+    this.hemisphere.groundColor.lerp(this.#target.hemisphereGround, t);
+    this.hemisphere.intensity += (this.#target.hemisphereIntensity - this.hemisphere.intensity) * t;
+    this.fill.color.lerp(this.#target.fillColor, t);
+    this.fill.intensity += (this.#target.fillIntensity - this.fill.intensity) * t;
   }
 
   #follow(focus) {

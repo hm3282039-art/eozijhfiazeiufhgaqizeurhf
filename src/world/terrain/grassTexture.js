@@ -9,18 +9,19 @@ export const GRASS_TILE_SIZE = 9;
  * Pelouse « jouet » : damier très discret de dalles arrondies + petits brins clairs/foncés.
  * @param {number} width largeur de la pelouse (unités monde)
  * @param {number} length longueur de la pelouse (unités monde)
+ * @param {typeof PALETTE.grass} [colors] palette de l'herbe (Zone 2 : émeraude)
  */
-export function createGrassTexture(width, length) {
+export function createGrassTexture(width, length, colors = PALETTE.grass) {
   const size = 512;
   const half = size / 2;
   const { canvas, ctx } = createCanvas(size, size);
   const rng = createRng(11);
 
-  ctx.fillStyle = PALETTE.grass.base;
+  ctx.fillStyle = colors.base;
   ctx.fillRect(0, 0, size, size);
 
   // Damier 2×2 de dalles légèrement plus claires.
-  ctx.fillStyle = PALETTE.grass.light;
+  ctx.fillStyle = colors.light;
   const inset = 7;
   for (const [cx, cy] of [[0, 0], [half, half]]) {
     roundRectPath(ctx, cx + inset, cy + inset, half - inset * 2, half - inset * 2, 34);

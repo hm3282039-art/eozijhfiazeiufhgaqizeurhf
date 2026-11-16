@@ -1,0 +1,120 @@
+/* ==========================================================================
+   Calque flottant : barres de vie des Breakables + chiffres de dégâts
+   On projette ces éléments en 2D à l'écran (calque repositionné chaque image)
+   ========================================================================== */
+
+.floating-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 6;
+}
+
+/* ── Barre de vie ─────────────────────────────────────────────────────── */
+
+.hp-bar {
+  --hp-size: 1rem;
+  /* Le positionnement exact est fixé en JS par transform (coordonnées écran). */
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.14rem;
+  font-size: var(--hp-size);
+  transition: opacity 0.25s ease;
+}
+
+.hp-bar--target .hp-bar__fill,
+.hp-bar--target .hp-bar__track {
+  box-shadow: 0 0.25rem 0 var(--ink), 0 0.3rem 0.4rem rgba(29, 33, 64, 0.3);
+}
+
+.hp-bar--small {
+  --hp-size: 0.76rem;
+}
+
+.hp-bar__name {
+  padding: 0.06rem 0.6rem;
+  border-radius: 0.6rem;
+  background: #fff;
+  border: 0.16rem solid var(--ink);
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: var(--text-outline);
+}
+
+.hp-bar__track {
+  position: relative;
+  display: block;
+  width: 8.4rem;
+  padding: 0.18rem 0.22rem;
+  border-radius: 0.65rem;
+  background: #fff;
+  border: 0.2rem solid var(--ink);
+  box-shadow: 0 0.22rem 0 var(--ink);
+  overflow: hidden;
+}
+
+.hp-bar__fill {
+  display: block;
+  height: 1rem;
+  width: 100%;
+  border-radius: 0.4rem;
+  background: linear-gradient(var(--hp-green), var(--hp-green-2));
+  border: 0.1rem solid rgba(29, 33, 64, 0.35);
+  transition: width 0.16s ease, background 0.16s ease;
+}
+
+/* Couleurs selon le ratio PV : vert → jaune → rouge */
+.hp-bar__fill {
+  --hp-green: var(--green-1);
+  --hp-green-2: var(--green-2);
+}
+
+.hp-bar__fill.is-warning {
+  --hp-green: var(--yellow-1);
+  --hp-green-2: var(--yellow-2);
+}
+
+.hp-bar__fill.is-critical {
+  --hp-green: var(--red-1);
+  --hp-green-2: var(--red-2);
+}
+
+.hp-bar__text {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ink);
+  text-shadow: var(--text-outline);
+}
+
+/* ── Chiffres de dégâts (aléatoirement déplacés, ils « rebondissent ») ──── */
+
+.damage-number {
+  /* Le positionnement exact est fixé en JS par transform (coordonnées écran). */
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0.12rem 0.55rem;
+  border-radius: 0.75rem;
+  background: #fff;
+  border: 0.2rem solid var(--ink);
+  box-shadow: 0 0.25rem 0 var(--ink);
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: var(--text-outline);
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.damage-number.is-crit {
+  background: var(--red-1);
+  font-size: 1.3rem;
+  text-shadow: 0 0.06rem 0 #7a1020, 0 0.14rem 0 rgba(0, 0, 0, 0.35);
+}

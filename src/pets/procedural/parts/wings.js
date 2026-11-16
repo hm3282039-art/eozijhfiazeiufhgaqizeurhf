@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { capsuleGeometry } from '../../../graphics/geometries.js';
-import { toyMaterial } from '../../../graphics/materials.js';
+import { glossyMaterial } from '../../../graphics/materials.js';
 import { BODY_HALF_DEPTH } from '../petAnatomy.js';
 import { partMesh, pivot } from './partUtils.js';
 
@@ -43,8 +43,8 @@ function getMembraneGeometry() {
  */
 export function createDragonWings(palette) {
   const group = pivot('Wings');
-  const membraneMaterial = toyMaterial(palette.secondary, { roughness: 0.55 });
-  const boneMaterial = toyMaterial(palette.body);
+  const membraneMaterial = glossyMaterial(palette.secondary, { roughness: 0.55 });
+  const boneMaterial = glossyMaterial(palette.body);
 
   const boneLength = Math.hypot(TIP.x, TIP.y - 0.06);
   const boneAngle = Math.atan2(TIP.y - 0.06, TIP.x);

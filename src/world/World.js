@@ -4,6 +4,7 @@ import { createSky } from './environment/Sky.js';
 import { Lighting } from './environment/Lighting.js';
 import { createOcean } from './environment/Ocean.js';
 import { createClouds } from './environment/Clouds.js';
+import { createSparkles } from './environment/Sparkles.js';
 import { createIsland } from './terrain/Island.js';
 import { createStoneBorder } from './terrain/StoneBorder.js';
 import { createCobblePath } from './terrain/CobblePath.js';
@@ -15,10 +16,11 @@ import { createFountain } from './props/Fountain.js';
 import { createRainbowArch } from './props/RainbowArch.js';
 import { createEggPedestal } from './props/EggPedestal.js';
 import { createZoneGate } from './props/ZoneGate.js';
+import { createZone2 } from './zone2/createZone2.js';
 import { BUSHES, ROCKS, TREES, isDecorationBlocked } from './layout/hubLayout.js';
 
 /**
- * Le monde de la Zone 1 (Hub de départ).
+ * Le monde du jeu : Zone 1 (Hub de départ) + Zone 2 (forêt de cerisiers & or).
  *
  * Chaque élément du décor est une « entité » toute simple :
  *   { object3D, update?(dt, time, focus), colliders? }
@@ -27,6 +29,11 @@ import { BUSHES, ROCKS, TREES, isDecorationBlocked } from './layout/hubLayout.js
 export class World {
   #scene;
   #updatables = [];
+  #sky;
+  #lighting;
+
+  /** La porte de la Zone 2 (mur laser, cadenas…). */
+  gate;
 
   /** @param {import('three').Scene} scene */
   constructor(scene) {
@@ -34,27 +41,48 @@ export class World {
     this.collision = new CollisionWorld(getWalkableBounds());
 
     // ── Environnement ──────────────────────────────────────────────────────
-    this.#add(createSky(scene));
-    this.#add(new Lighting());
+    this.#sky = createSky(scene);
+    this.#add(this.#sky);
+    this.#lighting = new Lighting();
+    this.#add(this.#lighting);
     this.#add(createOcean());
     this.#add(createClouds());
+    this.#add(createSparkles());
 
-    // ── Terrain ────────────────────────────────────────────────────────────
+    // ── Zone 1 : terrain ───────────────────────────────────────────────────
     this.#add(createIsland());
-    this.#add(createStoneBorder());
+    this.#add(
+      createStoneBorder(WORLD.island, {
+        gateGap: { center: WORLD.gate.x, halfWidth: WORLD.gate.halfOpening + WORLD.gate.pillarSize + 0.15 },
+      }),
+    );
     this.#add(createCobblePath());
 
-    // ── Végétation ─────────────────────────────────────────────────────────
+    // ── Zone 1 : végétation ─────────────────────────────────────────────────
     this.#add(createForest(TREES));
     this.#add(createBushes(BUSHES));
     this.#add(createRocks(ROCKS));
     this.#add(createFlowers({ bounds: getWalkableBounds(0.6), isBlocked: isDecorationBlocked }));
 
-    // ── Points d'intérêt ───────────────────────────────────────────────────
+    // ── Zone 1 : points d'intérêt ────────────────────────────────────────────
     this.#add(createFountain({ radius: WORLD.fountain.radius }), WORLD.fountain);
     this.#add(createRainbowArch(), WORLD.arch);
     this.#add(createEggPedestal({ radius: WORLD.eggPedestal.radius }), WORLD.eggPedestal);
-    this.#add(createZoneGate(WORLD.gate), WORLD.gate);
+    this.gate = createZoneGate(WORLD.gate);
+    this.#add(this.gate, WORLD.gate);
+
+    // ── Zone 2 : île au nord ─────────────────────────────────────────────────
+    this.#add(createZone2());
+
+    // ── Jonction Zone 1 / Zone 2 : la bordure de pierres de la Zone 1 ────────
+    // Ses pierres sont visuelles ; ces deux colliders invisibles empêchent de
+    // contourner la porte (le passage ne se fait que par l'ouverture, bloquée
+    // par le mur laser tant que la Zone 2 n'est pas débloquée).
+    const borderZ = WORLD.island.minZ + 0.7;
+    const gapHalf = WORLD.gate.halfOpening + WORLD.gate.pillarSize + 0.15;
+    const bounds = getWalkableBounds();
+    this.collision.add({ type: 'box', minX: bounds.minX, maxX: WORLD.gate.x - gapHalf, minZ: borderZ - 0.6, maxZ: borderZ + 0.6 });
+    this.collision.add({ type: 'box', minX: WORLD.gate.x + gapHalf, maxX: bounds.maxX, minZ: borderZ - 0.6, maxZ: borderZ + 0.6 });
   }
 
   /**
@@ -65,6 +93,12 @@ export class World {
    */
   update(dt, time, focus) {
     for (const entity of this.#updatables) entity.update(dt, time, focus);
+  }
+
+  /** Bascule l'ambiance du monde : 'day' (jour) ou 'sunset' (coucher de soleil doré). */
+  setMood(mood) {
+    this.#sky.setMood(mood);
+    this.#lighting.setMood(mood);
   }
 
   /**

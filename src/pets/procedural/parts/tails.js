@@ -5,7 +5,7 @@ import {
   sphereGeometry,
   taperedTubeGeometry,
 } from '../../../graphics/geometries.js';
-import { toyMaterial } from '../../../graphics/materials.js';
+import { glossyMaterial } from '../../../graphics/materials.js';
 import { BODY_HALF_DEPTH } from '../petAnatomy.js';
 import { partMesh, pivot } from './partUtils.js';
 
@@ -45,9 +45,9 @@ export function createCatTail(palette) {
   );
 
   const root = pivot('Tail', 0, 0.48, -BODY_HALF_DEPTH + 0.06);
-  root.add(partMesh(tube.geometry, toyMaterial(palette.body), 'TailTube'));
+  root.add(partMesh(tube.geometry, glossyMaterial(palette.body), 'TailTube'));
 
-  const tip = partMesh(sphereGeometry(1, 16, 12), toyMaterial(palette.secondary), 'TailTip');
+  const tip = partMesh(sphereGeometry(1, 16, 12), glossyMaterial(palette.secondary), 'TailTip');
   tip.scale.setScalar(0.13);
   tip.position.copy(tube.end);
   root.add(tip);
@@ -66,11 +66,11 @@ export function createDogTail(palette) {
   const wag = pivot('TailWag');
   root.add(wag);
 
-  const tail = partMesh(capsuleGeometry(0.095, 0.3), toyMaterial(palette.body), 'TailBase');
+  const tail = partMesh(capsuleGeometry(0.095, 0.3), glossyMaterial(palette.body), 'TailBase');
   tail.position.y = 0.2;
   wag.add(tail);
 
-  const tip = partMesh(sphereGeometry(1, 16, 12), toyMaterial(palette.secondary), 'TailTip');
+  const tip = partMesh(sphereGeometry(1, 16, 12), glossyMaterial(palette.secondary), 'TailTip');
   tip.scale.setScalar(0.118);
   tip.position.y = 0.43;
   wag.add(tip);
@@ -96,11 +96,11 @@ export function createDragonTail(palette) {
   );
 
   const root = pivot('Tail', 0, 0.42, -BODY_HALF_DEPTH + 0.1);
-  root.add(partMesh(tube.geometry, toyMaterial(palette.body), 'TailTube'));
+  root.add(partMesh(tube.geometry, glossyMaterial(palette.body), 'TailTube'));
 
   const spade = partMesh(
     softConeGeometry(0.16, 0.3, 0.04),
-    toyMaterial(palette.accent, { roughness: 0.35 }),
+    glossyMaterial(palette.accent, { roughness: 0.35 }),
     'TailSpade',
   );
   spade.position.copy(tube.end).addScaledVector(tube.endTangent, -0.05);

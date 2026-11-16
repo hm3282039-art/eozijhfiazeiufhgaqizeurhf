@@ -69,4 +69,53 @@ export const PALETTE = Object.freeze({
   gold: '#ffc93c',
   white: '#ffffff',
   ink: '#262b47',
+
+  /** Ambiances « jour » / « coucher de soleil doré » (panneau Admin) : le ciel et les lumières glissent de l'une à l'autre. */
+  moods: {
+    day: {
+      sky: { zenith: '#1f8fff', mid: '#6cc4ff', horizon: '#d2f0ff' },
+      fog: '#cdeeff',
+      sun: '#fff0d2',
+      sunIntensity: 2.3,
+      hemisphereSky: '#ffffff',
+      hemisphereGround: '#b4f59c',
+      hemisphereIntensity: 1.25,
+      fill: '#bfe3ff',
+      fillIntensity: 0.25,
+      glow: '#fff3c4',
+    },
+    sunset: {
+      sky: { zenith: '#5a4a9e', mid: '#ff9a5c', horizon: '#ffd9a0' },
+      fog: '#ffc98f',
+      sun: '#ffb066',
+      sunIntensity: 1.9,
+      hemisphereSky: '#ffd9b0',
+      hemisphereGround: '#8a5a3a',
+      hemisphereIntensity: 0.95,
+      fill: '#ff9a6a',
+      fillIntensity: 0.15,
+      glow: '#ff9a4d',
+    },
+  },
+
+  /** Couleurs des Breakables. */
+  breakable: {
+    wood: '#a06a35',
+    woodDark: '#7c4f24',
+    gold: '#ffc93c',
+    goldDark: '#e39a12',
+    royalRed: '#e0304e',
+    royalRedDark: '#b01e3c',
+    crystal: '#4fc3ff',
+    crystalDark: '#1f8ef0',
+    gem: '#ff5a7a',
+  },
+
+  /** Herbe émeraude de la Zone 2 (forêt de cerisiers & or). */
+  grassEmerald: {
+    base: '#2fbf71',
+    light: '#3fd183',
+    dark: '#28a862',
+    side: '#24995a',
+  },
 });
