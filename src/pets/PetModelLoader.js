@@ -49,7 +49,7 @@ export async function loadPetModel(url, { rotationY = 0, targetSize = GAME_CONFI
 
   model.traverse((node) => {
     if (node.isMesh) {
-      node.castShadow = true;
+      node.castShadow = false;
       node.receiveShadow = true;
     }
   });

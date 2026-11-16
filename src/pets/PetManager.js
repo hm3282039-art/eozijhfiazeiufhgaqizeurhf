@@ -27,6 +27,8 @@ export class PetManager {
   #animationStyle = DEFAULT_PET_ANIMATION;
   #createdCount = 0;
   #target = null;
+  /** Compteur de frames pour le throttle des étiquettes (une image sur deux). */
+  #labelFrame = 0;
   #damageBoostEnabled = false;
   #sizeMultiplier = 1;
   /** @type {number | null} surcharge de la taille d'équipe (Gamepass +15 Pets Équipés) */
@@ -345,10 +347,25 @@ export class PetManager {
   /**
    * Garde les étiquettes des pets lisibles quel que soit le zoom.
    * À appeler une fois la caméra mise à jour.
+   *
+   * Optimisation FPS : mise à jour à une image sur deux, et uniquement pour les
+   * objets proches (moins de 35 m de la caméra). Le calcul du zoom est léger, mais
+   * il est inutile de le refaire chaque image pour tous les pets.
+   *
    * @param {THREE.Camera} camera
    */
   updateLabels(camera) {
-    for (const { pet } of this.#members) pet.label.fitToCamera(camera.position, pet.position);
+    // Une image sur deux : le compteur alterne à chaque appel.
+    this.#labelFrame = (this.#labelFrame + 1) % 2;
+    if (this.#labelFrame !== 0) return;
+
+    const maxDistanceSq = 35 * 35;
+    for (const { pet } of this.#members) {
+      const dx = camera.position.x - pet.position.x;
+      const dz = camera.position.z - pet.position.z;
+      if (dx * dx + dz * dz > maxDistanceSq) continue;
+      pet.label.fitToCamera(camera.position, pet.position);
+    }
   }
 
   /**

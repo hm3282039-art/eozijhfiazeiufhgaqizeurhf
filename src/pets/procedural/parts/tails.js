@@ -6,7 +6,7 @@ import {
   taperedTubeGeometry,
 } from '../../../graphics/geometries.js';
 import { glossyMaterial } from '../../../graphics/materials.js';
-import { BODY_HALF_DEPTH } from '../petAnatomy.js';
+import { bodyLayout, DEFAULT_BODY } from '../petAnatomy.js';
 import { partMesh, pivot } from './partUtils.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -30,7 +30,8 @@ function getTailTube(key, points, options) {
  * Longue queue de chat dressée en « S », terminée par un pompon clair.
  * @returns {{ object3D: THREE.Group }} le groupe pivote à la base de la queue
  */
-export function createCatTail(palette) {
+export function createCatTail(palette, body = DEFAULT_BODY) {
+  const layout = bodyLayout(body);
   const tube = getTailTube(
     'cat',
     [
@@ -44,7 +45,7 @@ export function createCatTail(palette) {
     { radiusStart: 0.105, radiusEnd: 0.085, tubularSegments: 30, radialSegments: 12 },
   );
 
-  const root = pivot('Tail', 0, 0.48, -BODY_HALF_DEPTH + 0.06);
+  const root = pivot('Tail', 0, 0.48, -layout.halfDepth + 0.06);
   root.add(partMesh(tube.geometry, glossyMaterial(palette.body), 'TailTube'));
 
   const tip = partMesh(sphereGeometry(1, 16, 12), glossyMaterial(palette.secondary), 'TailTip');
@@ -59,9 +60,10 @@ export function createCatTail(palette) {
  * Petite queue de chien dressée, faite pour remuer.
  * @returns {{ object3D: THREE.Group, wag: THREE.Group }} `wag` : pivot à faire osciller (rotation Z)
  */
-export function createDogTail(palette) {
-  const root = pivot('Tail', 0, 0.8, -BODY_HALF_DEPTH + 0.06);
-  root.rotation.x = -0.8; // penchée vers l'arrière
+export function createDogTail(palette, body = DEFAULT_BODY) {
+  const layout = bodyLayout(body);
+  const root = pivot('Tail', 0, 0.8, -layout.halfDepth + 0.06);
+  root.rotation.x = -0.8;
 
   const wag = pivot('TailWag');
   root.add(wag);
@@ -79,10 +81,11 @@ export function createDogTail(palette) {
 }
 
 /**
- * Queue de dragon épaisse qui s'affine, terminée par une pointe dorée.
+ * Longue queue de dragon épaisse qui s'affine, terminée par une pointe dorée.
  * @returns {{ object3D: THREE.Group }}
  */
-export function createDragonTail(palette) {
+export function createDragonTail(palette, body = DEFAULT_BODY) {
+  const layout = bodyLayout(body);
   const tube = getTailTube(
     'dragon',
     [
@@ -95,7 +98,7 @@ export function createDragonTail(palette) {
     { radiusStart: 0.21, radiusEnd: 0.075, tubularSegments: 26, radialSegments: 14 },
   );
 
-  const root = pivot('Tail', 0, 0.42, -BODY_HALF_DEPTH + 0.1);
+  const root = pivot('Tail', 0, 0.42, -layout.halfDepth + 0.1);
   root.add(partMesh(tube.geometry, glossyMaterial(palette.body), 'TailTube'));
 
   const spade = partMesh(
@@ -111,13 +114,14 @@ export function createDragonTail(palette) {
 }
 
 /**
- * Queue de lapin : petit pompon rond et doux, posé sur le derrière.
+ * Queue de lapin : gros pompon rond et doux, posé sur le derrière.
  * @returns {{ object3D: THREE.Group }}
  */
-export function createBunnyTail(palette) {
-  const root = pivot('Tail', 0, 0.42, -BODY_HALF_DEPTH + 0.05);
+export function createBunnyTail(palette, body = DEFAULT_BODY) {
+  const layout = bodyLayout(body);
+  const root = pivot('Tail', 0, 0.42, -layout.halfDepth + 0.05);
   const pompon = partMesh(sphereGeometry(1, 18, 14), glossyMaterial(palette.secondary), 'TailPompon');
-  pompon.scale.setScalar(0.2);
+  pompon.scale.setScalar(0.22);
   pompon.position.y = 0.18;
   root.add(pompon);
   return { object3D: root };
@@ -127,7 +131,8 @@ export function createBunnyTail(palette) {
  * Queue de renard : longue et touffue, blanche à l'extrémité, qui pend et balance.
  * @returns {{ object3D: THREE.Group, wag: THREE.Group }} `wag` : pivot à faire osciller
  */
-export function createFoxTail(palette) {
+export function createFoxTail(palette, body = DEFAULT_BODY) {
+  const layout = bodyLayout(body);
   const tube = getTailTube(
     'fox',
     [
@@ -139,7 +144,7 @@ export function createFoxTail(palette) {
     { radiusStart: 0.14, radiusEnd: 0.11, tubularSegments: 22, radialSegments: 12 },
   );
 
-  const root = pivot('Tail', 0, 0.5, -BODY_HALF_DEPTH + 0.06);
+  const root = pivot('Tail', 0, 0.5, -layout.halfDepth + 0.06);
   root.rotation.x = -0.5;
 
   const wag = pivot('TailWag');
@@ -155,10 +160,11 @@ export function createFoxTail(palette) {
 }
 
 /**
- * Queue d'axolotl : nageoire arrière douce, qui ondule doucement.
+ * Queue d'axolotl : nageoire arrière douce et translucide, qui ondule.
  * @returns {{ object3D: THREE.Group }}
  */
-export function createAxolotlTail(palette) {
+export function createAxolotlTail(palette, body = DEFAULT_BODY) {
+  const layout = bodyLayout(body);
   const tube = getTailTube(
     'axolotl',
     [
@@ -170,7 +176,7 @@ export function createAxolotlTail(palette) {
     { radiusStart: 0.13, radiusEnd: 0.18, tubularSegments: 20, radialSegments: 12 },
   );
 
-  const root = pivot('Tail', 0, 0.4, -BODY_HALF_DEPTH + 0.05);
+  const root = pivot('Tail', 0, 0.4, -layout.halfDepth + 0.05);
   const fin = partMesh(
     tube.geometry,
     glossyMaterial(palette.accent, { roughness: 0.5, transparent: true, opacity: 0.92 }),

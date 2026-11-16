@@ -16,7 +16,7 @@ function createRock(rng) {
     stone.scale.set(size * rng.range(1.15, 1.5), size * rng.range(0.75, 1.0), size * rng.range(1.0, 1.3));
     stone.position.set(x, stone.scale.y * 0.36, z);
     stone.rotation.set(rng.range(-0.1, 0.1), rng.range(0, Math.PI), rng.range(-0.1, 0.1));
-    stone.castShadow = true;
+    stone.castShadow = false;
     stone.receiveShadow = true;
     rock.add(stone);
   };

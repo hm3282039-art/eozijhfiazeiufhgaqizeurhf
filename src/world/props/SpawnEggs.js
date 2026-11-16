@@ -79,7 +79,7 @@ function createPedestal(radius) {
       createToyMaterial({ color: tier.material, roughness: 0.72 }),
     );
     mesh.position.y = tier.y;
-    mesh.castShadow = true;
+    mesh.castShadow = false;
     mesh.receiveShadow = true;
     pedestal.add(mesh);
   }
@@ -106,7 +106,7 @@ function createSpawnEgg(eggDef, position) {
   );
   egg.name = 'SpawnEggShell';
   egg.position.y = EGG_REST_Y;
-  egg.castShadow = true;
+  egg.castShadow = false;
   group.add(egg);
 
   // Halo doux sous l'œuf.

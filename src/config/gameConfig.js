@@ -6,7 +6,7 @@ export const GAME_CONFIG = Object.freeze({
   renderer: {
     maxPixelRatio: 2,
     toneMappingExposure: 1.0,
-    shadowMapSize: 2048,
+    shadowMapSize: 1024,
     /** Demi-largeur (en unités monde) de la zone couverte par l'ombre du soleil. */
     shadowRange: 34,
   },
@@ -24,7 +24,7 @@ export const GAME_CONFIG = Object.freeze({
     /** Mode « Qualité Ultra » : ombres haute résolution + particules complètes. */
     ultra: {
       name: 'Qualité Ultra',
-      shadowMapSize: 2048,
+      shadowMapSize: 1024,
       shadowRange: 34,
       particles: 1,
       shadows: true,

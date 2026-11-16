@@ -14,6 +14,11 @@ const CONFETTI_LIFE = 1.3;
  *  - à la destruction, une gerbe de pièces / diamants jaillit, rebondit au sol,
  *    puis vole vers le joueur comme un aimant (et incrémente ses compteurs) ;
  *  - une explosion de confettis colorés célèbre la destruction.
+ *
+ * Optimisation FPS : les géométries et matériaux sont créés une seule fois (props de
+ * classe, partagés). Les MESHES utilisent un POOL : un mesh retiré de la scène est
+ * remis en réserve et réutilisé à la prochaine gerbe — aucune création/`dispose` dans
+ * la boucle de rendu, aucune pression sur le GC.
  */
 export class LootMagnet {
   #scene;
@@ -22,6 +27,10 @@ export class LootMagnet {
   #items = [];
   /** @type {{ mesh: THREE.Mesh, velocity: THREE.Vector3, spin: THREE.Vector3, life: number }[]} */
   #confetti = [];
+  /** Pool de meshes de butin (pièces + diamants) : réutilisés au retrait. */
+  #pool = [];
+  /** Pool de meshes de confettis. */
+  #confettiPool = [];
 
   #coinGeometry = cylinderGeometry(0.3, 0.3, 0.09, 16);
   #diamondGeometry = new THREE.OctahedronGeometry(0.26, 0);
@@ -53,9 +62,12 @@ export class LootMagnet {
   explodeConfetti(position, colors) {
     for (let i = 0; i < 26; i++) {
       const material = this.#confettiMaterial(this.#rng.pick(colors));
-      const mesh = new THREE.Mesh(this.#confettiGeometry, material);
+      const mesh = this.#takeConfetti();
+      mesh.material = material;
       mesh.position.set(position.x, 0.8, position.z);
       mesh.rotation.set(this.#rng.range(0, 3), this.#rng.range(0, 3), this.#rng.range(0, 3));
+      mesh.scale.setScalar(1);
+      mesh.visible = true;
       this.#scene.add(mesh);
       this.#confetti.push({
         mesh,
@@ -103,6 +115,8 @@ export class LootMagnet {
         if (distance < COLLECT_DISTANCE) {
           onCollect(item.currency, item.amount);
           this.#scene.remove(mesh);
+          mesh.visible = false;
+          this.#pool.push(mesh); // remis en réserve (pas de dispose : géométrie/matériau partagés)
           this.#items.splice(i, 1);
           continue;
         }
@@ -119,6 +133,8 @@ export class LootMagnet {
       piece.life -= dt;
       if (piece.life <= 0) {
         this.#scene.remove(piece.mesh);
+        piece.mesh.visible = false;
+        this.#confettiPool.push(piece.mesh); // remis en réserve
         this.#confetti.splice(i, 1);
         continue;
       }
@@ -144,12 +160,9 @@ export class LootMagnet {
       const amount = i === count - 1 ? remaining : base;
       remaining -= amount;
       if (amount <= 0) continue;
-      const mesh = new THREE.Mesh(
-        currency === 'coins' ? this.#coinGeometry : this.#diamondGeometry,
-        currency === 'coins' ? this.#coinMaterial : this.#diamondMaterial,
-      );
+      const mesh = this.#takeCurrency(currency);
       mesh.position.set(position.x, 0.9, position.z);
-      mesh.castShadow = true;
+      mesh.visible = true;
       this.#scene.add(mesh);
       this.#items.push({
         mesh,
@@ -164,6 +177,32 @@ export class LootMagnet {
         amount,
       });
     }
+  }
+
+  /** Prend un mesh de butin dans le pool (ou le crée une fois). */
+  #takeCurrency(currency) {
+    const mesh = this.#pool.pop() ?? new THREE.Mesh(
+      currency === 'coins' ? this.#coinGeometry : this.#diamondGeometry,
+      currency === 'coins' ? this.#coinMaterial : this.#diamondMaterial,
+    );
+    mesh.geometry = currency === 'coins' ? this.#coinGeometry : this.#diamondGeometry;
+    mesh.material = currency === 'coins' ? this.#coinMaterial : this.#diamondMaterial;
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    mesh.position.set(0, 0, 0);
+    mesh.rotation.set(0, 0, 0);
+    return mesh;
+  }
+
+  /** Prend un mesh de confetti dans le pool (ou le crée une fois). */
+  #takeConfetti() {
+    const mesh = this.#confettiPool.pop() ?? new THREE.Mesh(this.#confettiGeometry, this.#confettiMaterial('#ffffff'));
+    mesh.geometry = this.#confettiGeometry;
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    mesh.position.set(0, 0, 0);
+    mesh.rotation.set(0, 0, 0);
+    return mesh;
   }
 
   #confettiMaterial(color) {

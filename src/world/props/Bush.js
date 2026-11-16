@@ -25,7 +25,7 @@ export function createBush({ color = 'green', scale = 1, berries = null, seed = 
     const puff = new THREE.Mesh(geometry, shades[i % shades.length]);
     puff.position.set(Math.cos(angle) * distance, size * 0.62, Math.sin(angle) * distance);
     puff.scale.set(size, size * 0.82, size);
-    puff.castShadow = true;
+    puff.castShadow = false;
     puff.receiveShadow = true;
     bush.add(puff);
   }

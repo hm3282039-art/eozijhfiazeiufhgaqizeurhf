@@ -3,15 +3,17 @@ import { createCatEars } from '../parts/ears.js';
 import { createCatTail } from '../parts/tails.js';
 
 /**
- * « Starter Cat » : oreilles pointues, longue queue, moustaches et bouche en « W ».
+ * « Starter Cat » : corps compact, oreilles pointues, longue queue dressée,
+ * moustaches et bouche en « W » (design PS99 conservé).
  * @type {import('./index.js').SpeciesBuilder}
  */
 export const catSpecies = {
+  name: 'Cat',
   face: catFace,
 
-  buildParts(palette) {
-    const ears = createCatEars(palette);
-    const tail = createCatTail(palette);
+  buildParts(palette, body) {
+    const ears = createCatEars(palette, body);
+    const tail = createCatTail(palette, body);
 
     return {
       objects: [ears.object3D, tail.object3D],

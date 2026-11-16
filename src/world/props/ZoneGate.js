@@ -106,7 +106,7 @@ function createPillar(size, height) {
   orb.position.y = height + 1.15;
 
   for (const mesh of [shaft, plinth, band, cap, orb]) {
-    mesh.castShadow = true;
+    mesh.castShadow = false;
     mesh.receiveShadow = true;
     pillar.add(mesh);
   }
@@ -140,7 +140,7 @@ export function createZoneGate({ halfOpening, pillarSize, height, price, label }
     toyMaterial(PALETTE.gate.pillar, { roughness: 0.75 }),
   );
   lintel.position.y = lintelY;
-  lintel.castShadow = true;
+  lintel.castShadow = false;
   lintel.receiveShadow = true;
   group.add(lintel);
 
@@ -152,7 +152,7 @@ export function createZoneGate({ halfOpening, pillarSize, height, price, label }
     toyMaterial(PALETTE.gate.pillarCap, { roughness: 0.4 }),
   );
   board.position.set(0, signY, signZ);
-  board.castShadow = true;
+  board.castShadow = false;
   group.add(board);
 
   const face = new THREE.Mesh(

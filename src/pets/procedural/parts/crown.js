@@ -1,16 +1,18 @@
 import { goldMaterial, glossyMaterial } from '../../../graphics/materials.js';
 import { cylinderGeometry, sphereGeometry, softConeGeometry } from '../../../graphics/geometries.js';
-import { BODY_TOP_Y } from '../petAnatomy.js';
+import { bodyLayout, DEFAULT_BODY } from '../petAnatomy.js';
 import { partMesh, pivot } from './partUtils.js';
 
 const SPIKE_COUNT = 5;
 
 /**
- * Couronne dorée des pets « HUGE » : bandeau doré, pointes et gemme rouge,
- * posée sur le sommet du corps.
+ * Couronne dorée des pets « HUGE / TITANIC / GARGANTUAN » : bandeau doré, pointes
+ * et gemme rouge, posée sur le sommet du corps.
+ * @param {object} [body] dimensions du corps
  */
-export function createCrown() {
-  const crown = pivot('Crown', 0, BODY_TOP_Y + 0.02, 0);
+export function createCrown(body = DEFAULT_BODY) {
+  const layout = bodyLayout(body);
+  const crown = pivot('Crown', 0, layout.topY + 0.02, 0);
   const gold = goldMaterial();
 
   const band = partMesh(cylinderGeometry(0.36, 0.4, 0.24, 18), gold, 'CrownBand');

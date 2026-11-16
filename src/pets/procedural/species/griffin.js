@@ -8,11 +8,12 @@ import { createDogTail } from '../parts/tails.js';
  * @type {import('./index.js').SpeciesBuilder}
  */
 export const griffinSpecies = {
+  name: 'Griffin',
   face: griffinFace,
 
-  buildParts(palette) {
-    const wings = createDragonWings(palette);
-    const tail = createDogTail(palette);
+  buildParts(palette, body) {
+    const wings = createDragonWings(palette, body);
+    const tail = createDogTail(palette, body);
     let flapPhase = 0;
 
     return {

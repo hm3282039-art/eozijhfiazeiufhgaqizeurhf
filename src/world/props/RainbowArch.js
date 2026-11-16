@@ -25,7 +25,7 @@ function createCloudFoot() {
     const puff = new THREE.Mesh(geometry, material);
     puff.position.set(x, y, z);
     puff.scale.set(size, size * 0.86, size);
-    puff.castShadow = true;
+    puff.castShadow = false;
     puff.receiveShadow = true;
     foot.add(puff);
   }
@@ -46,7 +46,7 @@ export function createRainbowArch() {
       torusGeometry(radius, TUBE_RADIUS, Math.PI, 56, 12),
       toyMaterial(color, { roughness: 0.45 }),
     );
-    band.castShadow = true;
+    band.castShadow = false;
     band.receiveShadow = true;
     group.add(band);
   });

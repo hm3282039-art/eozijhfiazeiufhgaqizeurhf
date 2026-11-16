@@ -98,7 +98,7 @@ export function createStoneBorder(bounds = WORLD.island, { gateGap = null, edges
 
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  mesh.castShadow = true;
+  mesh.castShadow = false;
   mesh.receiveShadow = true;
 
   return { object3D: mesh };

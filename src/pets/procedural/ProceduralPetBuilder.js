@@ -1,229 +1,218 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { createToyMaterial, glossyMaterial, goldMaterial } from '../../graphics/materials.js';
+import { GAME_CONFIG } from '../../config/gameConfig.js';
+import { RARITIES } from '../../config/rarityConfig.js';
+import { roundedBoxGeometry } from '../../graphics/geometries.js';
+import { toyMaterial } from '../../graphics/materials.js';
 import { SparkleCloud } from '../../graphics/SparkleCloud.js';
-import { createFaceTextures, paintFaceTexture } from './faces/createFaceTextures.js';
-import { createPaws } from './parts/paws.js';
-import { createCrown } from './parts/crown.js';
-import { BODY, BODY_CENTER_Y, BODY_TOP_Y } from './petAnatomy.js';
+import { createFaceTextures, repaintFaceTexture } from './faces/createFaceTextures.js';
+import { bodyLayout, DEFAULT_BODY } from './petAnatomy.js';
 import { SPECIES_BUILDERS } from './species/index.js';
-import { getRarity } from '../../config/rarityConfig.js';
-import { PET_VARIANTS_VISUAL } from '../../config/variantConfig.js';
+import { createCrown } from './parts/crown.js';
+import { createAuraRing, createGoldenShoulders, createHalo } from './parts/muzzles.js';
+import { createPaws } from './parts/paws.js';
 
-/** Indice du groupe de matériaux « face avant (+Z) » d'une RoundedBoxGeometry. */
 const FRONT_FACE = 4;
 
-/** Palette entièrement dorée (visage + accessoires des pets « Golden »). */
-const GOLD_PALETTE = Object.freeze({
-  body: '#ffc93c',
-  secondary: '#ffe680',
-  accent: '#ffd23f',
-  cheek: '#ff9a9a',
-  ink: '#262b47',
-});
+/** Toutes les géométries et textures sont créées une seule fois au démarrage et partagées. */
+const geometryCache = new Map();
 
-let bodyGeometry = null;
-
-/** Le corps « guimauve carrée très adoucie », partagé par tous les pets procéduraux. */
-function getBodyGeometry() {
-  bodyGeometry ??= new RoundedBoxGeometry(BODY.width, BODY.height, BODY.depth, BODY.segments, BODY.radius);
-  return bodyGeometry;
+function getBodyGeometry(body) {
+  const key = `${body.width}x${body.height}x${body.depth}|${body.segments}|${body.radius}`;
+  if (!geometryCache.has(key)) {
+    geometryCache.set(key, roundedBoxGeometry(body.width, body.height, body.depth, body.segments, body.radius));
+  }
+  return geometryCache.get(key);
 }
 
-/** Mélange une couleur de palette vers la couleur de rareté (dominance rarity). */
-function tintTowardRarity(palette, rarity) {
-  const base = new THREE.Color(palette.body);
-  const target = new THREE.Color(rarity.color);
-  const mixed = base.clone().lerp(target, 0.7);
-  return { ...palette, body: `#${mixed.getHexString()}` };
+const rainbowPalettes = new WeakMap();
+
+/**
+ * Construit un pet procédural entier : corps, visage, pattes, accessoires d'espèce,
+ * variantes de couleur, aura de rareté et couronne des espèces « spéciales ».
+ *
+ * `builder` expose la description de l'espèce :
+ * - `body` : dimensions du corps (proportions propres à l'espèce)
+ * - `face` : peintre du visage (canvas 2D, coordonnées normalisées FACE)
+ * - `buildParts(palette)` : accessoires 3D + leur animation
+ *
+ * Aucun objet géométrie ou texture n'est recréé dans la boucle de rendu :
+ * les textures Rainbow sont REPEINTES sur un canvas déjà alloué, et l'aura tourne
+ * en transformant les Meshes.
+ *
+ * @returns {import('../Pet.js').PetModel}
+ */
+export function buildProceduralPet({ builder, palette, variant = 'normal', rarity = 'common' }) {
+  // `builder` peut être l'identifiant d'espèce (`'cat'`…) ou un objet builder déjà résolu.
+  const speciesBuilder = typeof builder === 'string' ? (SPECIES_BUILDERS[builder] ?? builder) : builder;
+  const layout = bodyLayout(speciesBuilder.body);
+  const root = new THREE.Group();
+  root.name = `ProceduralPet:${speciesBuilder.name}`;
+
+  const body = layout.body;
+  const bodyGeometry = getBodyGeometry(body);
+  const materials = new Array(6).fill(toyMaterial(palette.body));
+  const faceMaterial = new THREE.MeshStandardMaterial({
+    roughness: 0.45,
+    metalness: 0.04,
+    transparent: true,
+  });
+  materials[FRONT_FACE] = faceMaterial;
+  const bodyMesh = new THREE.Mesh(bodyGeometry, materials);
+  bodyMesh.position.y = layout.centerY;
+  bodyMesh.castShadow = false;
+  bodyMesh.receiveShadow = true;
+  root.add(bodyMesh);
+
+  // Textures du visage (cache par espèce + palette + proportions).
+  const textures = createFaceTextures(speciesBuilder.name, speciesBuilder.face, palette, body);
+  faceMaterial.map = textures.open;
+  faceMaterial.needsUpdate = true;
+
+  // Pattes (adaptées aux proportions du corps).
+  const { object3D: pawsGroup } = createPaws(palette.secondary, body);
+  root.add(pawsGroup);
+
+  // Accessoires de l'espèce (oreilles, ailes, queue, museau…).
+  const parts = speciesBuilder.buildParts(palette, body);
+  for (const object3D of parts.objects) {
+    if (object3D) root.add(object3D);
+  }
+
+  // —— Variantes de couleur : peinture par « composite », toujours réutilisable. ——
+  const variantPalette = variant !== 'normal' ? createVariantPalette(palette, variant) : palette;
+  if (variant === 'rainbow') {
+    rainbowPalettes.set(palette, variantPalette);
+    // Repeint la texture de face existante (pas de nouvelle texture) et applique
+    // un matériau translucide pour l'effet iridescent.
+    repaintFaceTexture(textures.open, speciesBuilder.face, variantPalette, { body });
+    faceMaterial.transparent = true;
+    faceMaterial.opacity = 0.92;
+  }
+  applyMaterials(root, variant);
+
+  // —— Aura de rareté + couronne des espèces spéciales. ——
+  const isSpecial = RARITIES[rarity]?.special === true;
+  const auraRadius = Math.max(layout.width, layout.depth) * 1.3;
+  const aura = RARITIES[rarity]?.aura === true
+    ? new SparkleCloud(variant === 'rainbow' ? '#ffd86b' : RARITIES[rarity].aura, 16, auraRadius, 0.45, 0.85)
+    : null;
+  if (aura) root.add(aura.object3D);
+
+  let crown = null;
+  if (isSpecial) {
+    const special = speciesBuilder.special ?? {};
+    const decoration = createCrown(body);
+    crown = special.halo ? decoration.object3D : decoration.object3D;
+    root.add(crown);
+    if (special.shoulders) root.add(createGoldenShoulders(body).object3D);
+    if (special.halo) {
+      const halo = createHalo(body);
+      root.add(halo.object3D);
+      root.userData.halo = halo;
+    }
+    root.userData.auraRing = createAuraRing(body).object3D;
+    root.add(root.userData.auraRing);
+    root.userData.crown = crown;
+    root.scale.setScalar(RARITIES[rarity].scale);
+  }
+
+  const petModel = {
+    kind: 'procedural',
+    object3D: root,
+    height: layout.topY,
+    portrait: textures.open.image ?? null,
+
+    update(pose = {}) {
+      parts.animate?.({
+        dt: pose.dt ?? 0.016,
+        time: pose.time ?? 0,
+        move: pose.move ?? 0,
+        hop: pose.hop ?? 0,
+      });
+
+      // Aura géante : cercle tournant + éclats tournants (transform, pas de recréation).
+      if (root.userData.auraRing) root.userData.auraRing.rotation.z += 0.045;
+      if (aura) {
+        aura.object3D.position.y = layout.centerY;
+        aura.object3D.rotation.y += 0.22;
+        aura.update(0.016, pose.time ?? 0);
+      }
+      if (root.userData.crown) {
+        root.userData.crown.children.forEach((child, index) => {
+          child.rotation.z = Math.sin(pose.time ?? 0 + index * 0.8) * 0.12;
+        });
+      }
+    },
+
+    updateVariant(dt, time) {
+      if (variant !== 'rainbow') return;
+      // Effet Rainbow : teinte qui tourne, repeinture du canvas existant (pas de création).
+      variantPalette.accent = `hsl(${(time * 45) % 360}, 90%, 60%)`;
+      repaintFaceTexture(textures.open, speciesBuilder.face, variantPalette, { body });
+    },
+
+    setEyesClosed(closed) {
+      faceMaterial.map = closed ? textures.closed : textures.open;
+      faceMaterial.needsUpdate = true;
+    },
+
+    dispose() {
+      if (aura) aura.dispose();
+    },
+  };
+
+  return petModel;
+}
+
+/** Palette de variante : on ne copie pas l'objet, on crée une palette équivalente. */
+function createVariantPalette(palette, variant) {
+  if (variant === 'golden') {
+    return { ...palette, body: '#f7c948', secondary: '#f2b73c', accent: '#fbe98c', ink: '#3a2700' };
+  }
+  if (variant === 'shiny') {
+    return { ...palette, body: '#5fc3b4', secondary: '#3fa896', accent: '#bff0e6', ink: '#0b2622' };
+  }
+  // rainbow : teinte initiale, recalculée par updateVariant.
+  return { ...palette, body: '#ff5fa2', secondary: '#f24b8f', accent: '#ff86c4', ink: '#2a0a1a' };
 }
 
 /**
- * Générateur procédural « style Blender » : construit un pet complet sans aucun fichier 3D.
- *
- *  1. corps        RoundedBoxGeometry en matériau « Toy Glossy » (rareté teinte)
- *  2. visage       texture <canvas> kawaii appliquée sur la face avant
- *  3. accessoires  pattes arrondies + éléments propres à l'espèce
- *
- * Raretés (`rarity`) : teinte de la couleur vers la rareté, éclat (emissive) pour les
- * raretés lumineuses, aura d'étincelles pour les raretés stellaires / spéciales,
- * et taille (scale) pour HUGE / TITANIC / GARGANTUAN.
- *
- * Variantes (`variant`) : golden (or), rainbow (arc-en-ciel), shiny (éclat métallique).
- *
- * @param {{ builder: string, palette: import('./species/index.js').PetPalette, variant?: string, rarity?: string }} options
- * @returns {import('../Pet.js').PetVisual}
+ * Applique un filtrage uniforme à tous les matériaux d'un pet :
+ * les matériaux sont clonés une fois (pas en boucle) et ne sont pas partagés.
+ * Le corps utilise un TABLEAU de 6 matériaux (faces du RoundedBox) : on clone chaque élément.
  */
-export function buildProceduralPet({ builder, palette, variant = 'normal', rarity = 'basic' }) {
-  const species = SPECIES_BUILDERS[builder];
-  if (!species) throw new Error(`Espèce procédurale inconnue : « ${builder} »`);
-
-  const variantDef = PET_VARIANTS_VISUAL[variant] ?? PET_VARIANTS_VISUAL.normal;
-  const rarityDef = getRarity(rarity);
-  const isGolden = variant === 'golden';
-  const isRainbow = variant === 'rainbow';
-  const isShiny = variant === 'shiny';
-  const isSpecial = !!rarityDef.special;
-
-  // Palette effective : or pour golden, sinon teinte vers la rareté.
-  const effectivePalette = isGolden ? GOLD_PALETTE : tintTowardRarity(palette, rarityDef);
-
-  const root = new THREE.Group();
-  root.name = `ProceduralPet(${builder}${variant !== 'normal' ? `, ${variant}` : ''}${rarity !== 'basic' ? `, ${rarity}` : ''})`;
-
-  // ── 1 & 2. Corps + visage ────────────────────────────────────────────────
-  const faceTextures = createFaceTextures(builder, species.face, effectivePalette);
-  // Matériau « peau » : or (golden), shiny (éclat métallique), ou glossy teinté rareté.
-  const skinMaterial = isGolden
-    ? goldMaterial()
-    : glossyMaterial(effectivePalette.body, {
-        roughness: isShiny ? 0.12 : 0.25,
-        metalness: isShiny ? 0.55 : 0.1,
-        // Éclat des raretés lumineuses.
-        ...(rarityDef.emissive
-          ? { emissive: rarityDef.glow, emissiveIntensity: rarityDef.neon ? 0.7 : 0.35 }
-          : {}),
+function applyMaterials(node, mode) {
+  const apply = (material) => {
+    material.emissive = new THREE.Color(material.emissive?.getHex?.() ?? '#000000');
+    if (mode === 'golden') {
+      material.emissive = new THREE.Color('#5c3d00');
+      material.emissiveIntensity = 0.45;
+      material.roughness = 0.25;
+    } else if (mode === 'shiny') {
+      material.roughness = 0.12;
+      material.metalness = 0.85;
+      material.emissiveIntensity = 0.2;
+    } else if (mode === 'rainbow') {
+      material.emissive = new THREE.Color('#0b1a26');
+      material.emissiveIntensity = 0.45;
+      material.roughness = 0.22;
+      material.metalness = 0.55;
+    }
+  };
+  node.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    if (Array.isArray(child.material)) {
+      child.material = child.material.map((material) => {
+        const clone = material.clone();
+        apply(clone);
+        return clone;
       });
-  const faceMaterial = createToyMaterial({ map: faceTextures.open, roughness: 0.3, metalness: 0.05 });
-
-  const materials = new Array(6).fill(skinMaterial);
-  materials[FRONT_FACE] = faceMaterial;
-
-  const body = new THREE.Mesh(getBodyGeometry(), materials);
-  body.name = 'Body';
-  body.position.y = BODY_CENTER_Y;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  root.add(body);
-
-  // ── 3. Accessoires sculptés ──────────────────────────────────────────────
-  root.add(createPaws(effectivePalette.secondary).object3D);
-
-  const parts = species.buildParts(effectivePalette);
-  root.add(...parts.objects);
-
-  // ── Variantes : traitement des matériaux ───────────────────────────────────
-  let sparkles = null;
-  /** @type {{ material: THREE.Material, hue: number, saturation: number, lightness: number }[]} */
-  const rainbowMaterials = [];
-  let rainbowFace = null;
-  let aura = null;
-
-  // Traitement des matériaux d'un mesh : le corps est un mesh à matériaux multiples
-  // (5 groupes « peau » + 1 groupe « visage »). On conserve toujours le visage
-  // (son texture) et on transforme les autres matériaux selon la variante.
-  const rainbowColor = new THREE.Color();
-  const applyMaterials = (node, mode) => {
-    if (!node.isMesh) return;
-    const isArray = Array.isArray(node.material);
-    const mats = isArray ? node.material : [node.material];
-    const next = mats.map((m) => {
-      if (m === faceMaterial) return m; // le visage garde sa texture
-      if (mode === 'golden') return goldMaterial();
-      if (mode === 'shiny') {
-        // Éclat métallique : on clone pour ne pas toucher les matériaux partagés.
-        const clone = m.clone();
-        clone.metalness = 0.6;
-        clone.roughness = 0.14;
-        return clone;
-      }
-      if (mode === 'rainbow') {
-        const clone = m.clone(); // matériau unique (les partagés ne doivent pas changer)
-        const hsl = {};
-        clone.color.getHSL(hsl);
-        rainbowMaterials.push({ material: clone, hue: hsl.h, saturation: hsl.s, lightness: hsl.l });
-        return clone;
-      }
-      return m;
-    });
-    node.material = isArray ? next : next[0];
-  };
-
-  if (isGolden) {
-    root.traverse((node) => applyMaterials(node, 'golden'));
-    sparkles = new SparkleCloud({ count: 16, radius: 0.85, height: 2.4, size: 0.2, colors: ['#ffd94d', '#fff3b0', '#ffb81f'] });
-    sparkles.object3D.position.y = 0.2;
-    root.add(sparkles.object3D);
-  }
-
-  if (isShiny) {
-    root.traverse((node) => applyMaterials(node, 'shiny'));
-  }
-
-  if (isRainbow) {
-    root.traverse((node) => applyMaterials(node, 'rainbow'));
-    rainbowFace = { open: faceTextures.open, closed: faceTextures.closed, lastPaint: -1, lastHue: -1 };
-  }
-
-  // ── Rareté : aura + couronne (spéciales) + taille ──────────────────────────
-  if (rarityDef.aura) {
-    aura = new SparkleCloud({
-      count: rarityDef.stellaire ? 22 : 14,
-      radius: rarityDef.special ? 1.6 : 1.05,
-      height: rarityDef.special ? 3.2 : 2.2,
-      size: rarityDef.special ? 0.26 : 0.18,
-      colors: [rarityDef.color, rarityDef.glow, '#ffffff'],
-    });
-    aura.object3D.position.y = 0.1;
-    root.add(aura.object3D);
-  }
-
-  if (isSpecial) {
-    const crown = createCrown().object3D;
-    crown.position.y = BODY_TOP_Y + 0.02;
-    crown.scale.setScalar(isSpecial ? 1.15 : 1);
-    root.add(crown);
-    root.scale.setScalar(rarityDef.scale);
-  }
-
-  // Hauteur totale (oreilles, cornes, couronne, aura comprises) : sert à placer l'étiquette.
-  const height = new THREE.Box3().setFromObject(root).max.y;
-
-  const applyRainbow = (hue, time) => {
-    for (const entry of rainbowMaterials) {
-      entry.material.color.setHSL((hue + entry.hue) % 1, entry.saturation, entry.lightness);
+    } else {
+      const clone = child.material.clone();
+      apply(clone);
+      child.material = clone;
     }
-    // Le fond du visage suit la teinte du corps : on redessine la texture (throttle ~8 fois/s).
-    if (rainbowFace && Math.abs(hue - rainbowFace.lastHue) > 0.035 && time - rainbowFace.lastPaint > 0.12) {
-      const eyesClosed = faceMaterial.map === rainbowFace.closed;
-      rainbowFace.lastHue = hue;
-      rainbowFace.lastPaint = time;
-      rainbowColor.setHSL(hue, 0.82, 0.58);
-      const rainbowPalette = { ...palette, body: `#${rainbowColor.getHexString()}` };
-      const open = paintFaceTexture(species.face, rainbowPalette);
-      const closed = paintFaceTexture(species.face, rainbowPalette, { width: 512, closed: true });
-      rainbowFace.open.dispose();
-      rainbowFace.closed.dispose();
-      rainbowFace.open = open;
-      rainbowFace.closed = closed;
-      faceMaterial.map = eyesClosed ? closed : open;
-      faceMaterial.needsUpdate = true;
-    }
-  };
-
-  return {
-    kind: 'procedural',
-    object3D: root,
-    height: Math.max(height, BODY_TOP_Y),
-    portrait: faceTextures.open.image,
-    update: (pose) => parts.animate(pose),
-    updateVariant(dt, time) {
-      if (sparkles) sparkles.update(dt, time);
-      if (aura) aura.update(dt, time);
-      if (isRainbow) applyRainbow((time * 0.22) % 1, time);
-    },
-    setEyesClosed(closed) {
-      faceMaterial.map = closed ? (rainbowFace?.closed ?? faceTextures.closed) : (rainbowFace?.open ?? faceTextures.open);
-    },
-    dispose() {
-      faceMaterial.dispose();
-      if (rainbowFace) {
-        rainbowFace.open.dispose();
-        rainbowFace.closed.dispose();
-      }
-      for (const entry of rainbowMaterials) entry.material.dispose();
-      sparkles?.dispose();
-      aura?.dispose();
-    },
-  };
+  });
 }
+
+export { geometryCache };

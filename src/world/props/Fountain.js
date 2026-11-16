@@ -29,7 +29,7 @@ function createBasin(radius, stone) {
   ].map(([x, y]) => new THREE.Vector2(x, y));
 
   const basin = new THREE.Mesh(new THREE.LatheGeometry(profile, 56), stone);
-  basin.castShadow = true;
+  basin.castShadow = false;
   basin.receiveShadow = true;
   return basin;
 }
@@ -49,7 +49,7 @@ function createBowl(stone) {
 
   const bowl = new THREE.Mesh(new THREE.LatheGeometry(profile, 44), stone);
   bowl.position.y = BOWL_Y;
-  bowl.castShadow = true;
+  bowl.castShadow = false;
   bowl.receiveShadow = true;
   return bowl;
 }
@@ -86,12 +86,12 @@ export function createFountain({ radius = 3.5 } = {}) {
   group.add(createWaterDisc(radius - 0.5, POOL_WATER_Y, water));
 
   const column = new THREE.Mesh(softCylinderGeometry(0.62, BOWL_Y + 0.1, 0.14, 28), stone);
-  column.castShadow = true;
+  column.castShadow = false;
   group.add(column);
 
   const columnRing = new THREE.Mesh(softCylinderGeometry(0.85, 0.3, 0.12, 28), trim);
   columnRing.position.y = 0.95;
-  columnRing.castShadow = true;
+  columnRing.castShadow = false;
   group.add(columnRing);
 
   group.add(createBowl(stone));
@@ -99,13 +99,13 @@ export function createFountain({ radius = 3.5 } = {}) {
 
   const spout = new THREE.Mesh(softCylinderGeometry(0.26, SPOUT_TOP_Y - BOWL_Y - 0.3, 0.08, 20), stone);
   spout.position.y = BOWL_Y + 0.3;
-  spout.castShadow = true;
+  spout.castShadow = false;
   group.add(spout);
 
   const finial = new THREE.Mesh(sphereGeometry(1, 20, 14), trim);
   finial.scale.setScalar(0.3);
   finial.position.y = SPOUT_TOP_Y + 0.12;
-  finial.castShadow = true;
+  finial.castShadow = false;
   group.add(finial);
 
   // ── Ondes à la surface du grand bassin ────────────────────────────────────

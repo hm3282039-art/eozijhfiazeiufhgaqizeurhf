@@ -17,6 +17,10 @@ export class FloatingText {
   #numbers = [];
   #hpBars = new Map();
   #projected = new THREE.Vector3();
+  /** Compteur de frames pour le throttle de la projection DOM (une image sur deux). */
+  #frame = 0;
+  /** Au-delà de cette distance (en m), les barres de vie ne sont plus projetées. */
+  static HpDistanceSq = 35 * 35;
 
   /** @param {HTMLElement} root conteneur (le HUD) */
   constructor(root) {
@@ -64,7 +68,21 @@ export class FloatingText {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // ── Barres de vie ────────────────────────────────────────────────────────
+    // ── Chiffres de dégâts : vie décroissante chaque image (disparition) ──────
+    for (const entry of this.#numbers) {
+      if (entry.life <= 0) continue;
+      entry.life -= dt;
+      entry.position.y += dt * 1.5;
+      if (entry.life <= 0) {
+        entry.element.style.display = 'none';
+      }
+    }
+
+    // ── Projection DOM : une image sur deux seulement (optimisation FPS) ─────
+    this.#frame = (this.#frame + 1) % 2;
+    if (this.#frame !== 0) return;
+
+    // ── Barres de vie (proches seulement : < 35 m) ────────────────────────────
     for (const breakable of breakables) {
       const visible = breakable.showHpBar || breakable === target;
       let bar = this.#hpBars.get(breakable);
@@ -72,17 +90,28 @@ export class FloatingText {
         if (bar) bar.element.style.display = 'none';
         continue;
       }
+      // Éloignement : l'élément DOM est créé (événement discret : clic/cible),
+      // mais aucune mise à jour per-frame (transform/width/texte) pour un bar
+      // éloigné — optimisation FPS. Le bar reste invisible jusqu'à 35 m.
+      const dx = camera.position.x - breakable.position.x;
+      const dz = camera.position.z - breakable.position.z;
+      const near = dx * dx + dz * dz <= FloatingText.HpDistanceSq;
       if (!bar) {
         bar = this.#createHpBar(breakable);
         this.#hpBars.set(breakable, bar);
       }
-      bar.element.style.display = '';
+      if (!near) {
+        bar.element.style.display = 'none';
+        continue;
+      }
       const screen = this.#project(camera, breakable.position.x, breakable.height + 0.9, breakable.position.z, width, height);
       if (!screen) {
         bar.element.style.display = 'none';
         continue;
       }
-      bar.element.style.transform = `translate(-50%, -100%) translate(${screen.x}px, ${screen.y}px)`;
+      bar.element.style.display = '';
+      // `translate3d` : déclenche le GPU (compositor) sans recalcul de mise en page.
+      bar.element.style.transform = `translate3d(-50%, -100%, 0) translate3d(${screen.x}px, ${screen.y}px, 0)`;
       const fraction = breakable.hpFraction;
       bar.fill.style.width = `${Math.round(fraction * 100)}%`;
       bar.fill.className = `hp-bar__fill${fraction > 0.5 ? '' : fraction > 0.25 ? ' is-warning' : ' is-critical'}`;
@@ -92,19 +121,14 @@ export class FloatingText {
     // ── Chiffres de dégâts ───────────────────────────────────────────────────
     for (const entry of this.#numbers) {
       if (entry.life <= 0) continue;
-      entry.life -= dt;
-      if (entry.life <= 0) {
-        entry.element.style.display = 'none';
-        continue;
-      }
-      entry.position.y += dt * 1.5;
       const screen = this.#project(camera, entry.position.x, entry.position.y, entry.position.z, width, height);
       if (!screen) {
         entry.element.style.display = 'none';
         continue;
       }
       const t = entry.life / NUMBER_LIFE;
-      entry.element.style.transform = `translate(-50%, -50%) translate(${screen.x}px, ${screen.y}px) scale(${0.7 + 0.5 * Math.min(1, t * 3)})`;
+      entry.element.style.display = '';
+      entry.element.style.transform = `translate3d(-50%, -50%, 0) translate3d(${screen.x}px, ${screen.y}px, 0) scale(${0.7 + 0.5 * Math.min(1, t * 3)})`;
       entry.element.style.opacity = String(Math.min(1, t * 2.5));
     }
   }

@@ -1,0 +1,110 @@
+/* ==========================================================================
+   Bouton « 🚀 Ouvrir dans le Navigateur (Lien Direct) »
+   En haut à droite, à gauche du bouton « Plein Écran » (qui est décalé à
+   `right: calc(var(--edge) + 7.4rem)`)
+   ========================================================================== */
+
+.browser-open-button {
+  position: absolute;
+  top: var(--edge);
+  /* À gauche du bouton Plein Écran (7.4rem de décalage + sa largeur ~8.5rem + gap). */
+  right: calc(var(--edge) + 7.4rem + 0.5rem + 8.5rem);
+  width: 15.5rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border: 0.18rem solid var(--ink);
+  border-radius: 0.95rem;
+  background: linear-gradient(var(--pink-1), var(--pink-2));
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: var(--text-outline);
+  box-shadow: 0 0.35rem 0 var(--ink), 0 0.5rem 0.8rem rgba(29, 33, 64, 0.28);
+  cursor: pointer;
+  transition: transform 0.09s ease, filter 0.12s ease;
+}
+
+.browser-open-button:hover {
+  filter: brightness(1.08) saturate(1.08);
+  transform: translateY(-0.18rem);
+}
+
+.browser-open-button:active {
+  transform: translateY(0.2rem);
+}
+
+.browser-open-button.is-link {
+  background: linear-gradient(var(--orange-1, var(--pink-1)), var(--orange-2, var(--pink-2)));
+}
+
+.browser-open-button__icon {
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+/* —— Mode « bloqueur de pop-up » : lien cliquable en dessous du bouton —— */
+.browser-open-button__link {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 22rem;
+  padding: 0.5rem 0.7rem;
+  border: 0.15rem solid var(--ink);
+  border-radius: 0.7rem;
+  background: var(--card-bg, #1d2140);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: normal;
+  box-shadow: 0 0.3rem 0 var(--ink), 0 0.4rem 0.8rem rgba(29, 33, 64, 0.35);
+  z-index: 20;
+}
+
+.browser-open-button__link[hidden] {
+  display: none;
+}
+
+.browser-open-button__link-label {
+  color: var(--text-muted, #c8cce0);
+}
+
+.browser-open-button__anchor {
+  display: block;
+  color: #7fd0ff;
+  text-decoration: underline;
+  word-break: break-all;
+  cursor: pointer;
+}
+
+.browser-open-button__anchor:hover {
+  color: #b3e3ff;
+}
+
+/* Écrans étroits : se rapproche du bord droit, en haut du Plein Écran. */
+@media (max-width: 900px) {
+  .browser-open-button {
+    right: calc(var(--edge) + 7.4rem + 0.5rem + 12rem);
+    width: 12rem;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.65rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .browser-open-button {
+    right: var(--edge);
+    top: calc(var(--edge) + 8.6rem);
+    width: auto;
+    max-width: 15rem;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.6rem;
+  }
+}

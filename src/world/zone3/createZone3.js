@@ -76,7 +76,7 @@ function createCrystal(def) {
     }),
   );
   crystal.position.y = height / 2;
-  crystal.castShadow = true;
+  crystal.castShadow = false;
   group.add(crystal);
 
   // Pic secondaire (inclinaison).
@@ -93,7 +93,7 @@ function createCrystal(def) {
   );
   secondary.position.set(0.5 * def.scale, height * 0.35, 0.3 * def.scale);
   secondary.rotation.set(0.3, 0.5, 0.2);
-  secondary.castShadow = true;
+  secondary.castShadow = false;
   group.add(secondary);
 
   // Halo lumineux au pied du cristal.
@@ -151,7 +151,7 @@ function createGoldPillar(x, z) {
     goldMaterial({ roughness: 0.35, emissive: '#7a4a00', emissiveIntensity: 0.3 }),
   );
   pillar.position.y = 2.5;
-  pillar.castShadow = true;
+  pillar.castShadow = false;
   pillar.receiveShadow = true;
   group.add(pillar);
 
@@ -160,7 +160,7 @@ function createGoldPillar(x, z) {
     createToyMaterial({ color: PALETTE.gold, roughness: 0.3, emissive: '#7a4a00', emissiveIntensity: 0.4 }),
   );
   cap.position.y = 5.2;
-  cap.castShadow = true;
+  cap.castShadow = false;
   group.add(cap);
 
   return group;
@@ -177,13 +177,13 @@ function createStoneArch(x, z, span) {
 
   const left = new THREE.Mesh(pillarGeo, stoneMat);
   left.position.set(-span / 2, 2.25, 0);
-  left.castShadow = true;
+  left.castShadow = false;
   left.receiveShadow = true;
   group.add(left);
 
   const right = new THREE.Mesh(pillarGeo, stoneMat);
   right.position.set(span / 2, 2.25, 0);
-  right.castShadow = true;
+  right.castShadow = false;
   right.receiveShadow = true;
   group.add(right);
 
@@ -195,7 +195,7 @@ function createStoneArch(x, z, span) {
   top.rotation.z = Math.PI / 2;
   top.rotation.y = Math.PI / 2;
   top.position.set(0, 4.5, 0);
-  top.castShadow = true;
+  top.castShadow = false;
   group.add(top);
 
   return group;

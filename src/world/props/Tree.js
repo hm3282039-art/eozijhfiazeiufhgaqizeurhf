@@ -13,7 +13,7 @@ function createTrunk(rng) {
     toyMaterial(rng.chance(0.5) ? PALETTE.wood.trunk : PALETTE.wood.trunkDark, { roughness: 0.85 }),
   );
   trunk.position.y = TRUNK_HEIGHT / 2;
-  trunk.castShadow = true;
+  trunk.castShadow = false;
   trunk.receiveShadow = true;
   return trunk;
 }
@@ -23,7 +23,7 @@ function addBlob(parent, geometry, material, position, scale, rotationY = 0) {
   blob.position.set(...position);
   blob.scale.set(...scale);
   blob.rotation.y = rotationY;
-  blob.castShadow = true;
+  blob.castShadow = false;
   blob.receiveShadow = true;
   parent.add(blob);
   return blob;

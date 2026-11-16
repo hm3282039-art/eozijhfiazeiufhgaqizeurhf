@@ -7,11 +7,12 @@ import { createFoxTail } from '../parts/tails.js';
  * @type {import('./index.js').SpeciesBuilder}
  */
 export const foxSpecies = {
+  name: 'Fox',
   face: foxFace,
 
-  buildParts(palette) {
-    const ears = createFoxEars(palette);
-    const tail = createFoxTail(palette);
+  buildParts(palette, body) {
+    const ears = createFoxEars(palette, body);
+    const tail = createFoxTail(palette, body);
 
     return {
       objects: [ears.object3D, tail.object3D],

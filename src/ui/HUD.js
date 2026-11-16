@@ -3,6 +3,7 @@ import { EVENTS } from '../core/EventBus.js';
 import { CURRENCIES } from '../economy/Wallet.js';
 import { formatNumber } from '../utils/format.js';
 import { AdminButton } from './components/AdminButton.js';
+import { BrowserOpenButton } from './components/BrowserOpenButton.js';
 import { ActionBar } from './components/ActionBar.js';
 import { CurrencyBar } from './components/CurrencyBar.js';
 import { HelpBox } from './components/HelpBox.js';
@@ -101,6 +102,7 @@ export class HUD {
     const zoneBanner = new ZoneBanner(ZONES[0]);
     this.#zoneBanner = zoneBanner;
     const adminButton = new AdminButton({ onOpen: actions.openAdmin });
+    const browserOpenButton = new BrowserOpenButton();
 
     // L'ordre fixe l'empilement : notifications puis calque flottant au-dessus,
     // et les panneaux au-dessus de tout.
@@ -111,6 +113,7 @@ export class HUD {
       helpBox.element,
       adminButton.element,
       fullscreenButton?.element,
+      browserOpenButton.element,
       actionBar.element,
       this.#toasts.element,
       ...this.#panels.map((panel) => panel.element),

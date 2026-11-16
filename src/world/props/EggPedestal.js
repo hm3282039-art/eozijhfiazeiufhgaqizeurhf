@@ -115,7 +115,7 @@ function createPedestal(radius) {
   for (const tier of tiers) {
     const mesh = new THREE.Mesh(softCylinderGeometry(tier.radius, tier.height, 0.13, 44), tier.material);
     mesh.position.y = tier.y;
-    mesh.castShadow = true;
+    mesh.castShadow = false;
     mesh.receiveShadow = true;
     pedestal.add(mesh);
   }
@@ -137,7 +137,7 @@ export function createEggPedestal({ radius = 3.5 } = {}) {
   );
   egg.name = 'GiantEgg';
   egg.position.y = EGG_REST_Y;
-  egg.castShadow = true;
+  egg.castShadow = false;
   group.add(egg);
 
   // Halo doux posé sur le coussin, sous l'œuf.
