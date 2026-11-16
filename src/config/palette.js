@@ -118,4 +118,21 @@ export const PALETTE = Object.freeze({
     dark: '#28a862',
     side: '#24995a',
   },
+
+  /** Sol sombre / violet des Mines de Cristal (Zone 3). */
+  grassCrystal: {
+    base: '#3a2a52',
+    light: '#4a3868',
+    dark: '#2c2040',
+    side: '#241a35',
+  },
+
+  /** Couleurs des cristaux géants de la Zone 3. */
+  crystalMine: {
+    cyan: '#27d3ee',
+    cyanDark: '#0ea5c4',
+    magenta: '#ff2ee0',
+    magentaDark: '#c010a0',
+    violet: '#7c4dff',
+  },
 });

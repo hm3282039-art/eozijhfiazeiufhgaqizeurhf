@@ -76,6 +76,16 @@
   background: linear-gradient(var(--blue-1), var(--blue-2));
 }
 
+.action-btn--hoverboard {
+  background: linear-gradient(#7c4dff, #4a2db8);
+}
+
+.action-btn--hoverboard.is-active {
+  background: linear-gradient(#27d3ee, #7c4dff);
+  box-shadow: 0 0 0.5rem 0 var(--ink), 0 0.5rem 0.8rem rgba(124, 77, 255, 0.5),
+    inset 0 0.28rem 0 rgba(255, 255, 255, 0.5), inset 0 -0.3rem 0 rgba(29, 33, 64, 0.16);
+}
+
 /* Écrans très étroits (fenêtre réduite, téléphone en portrait) : boutons compacts. */
 @media (max-width: 600px) {
   .action-bar {

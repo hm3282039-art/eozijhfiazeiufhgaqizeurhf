@@ -18,6 +18,7 @@ import { button, el } from '../dom.js';
  *   setPlayerSpeed: (multiplier: number) => void,
  *   setPetSize: (multiplier: number) => void,
  *   toggleMood: () => 'day' | 'sunset',
+ *   setQuality: (quality: 'performance' | 'ultra') => void,
  * }} actions
  */
 export class AdminPanel extends Modal {
@@ -26,6 +27,7 @@ export class AdminPanel extends Modal {
   #moodButton;
   #speedValue;
   #sizeValue;
+  #qualityButton;
 
   constructor(actions) {
     super({ title: 'Admin Panel', emoji: '🛠️', variant: 'admin' });
@@ -41,6 +43,10 @@ export class AdminPanel extends Modal {
     );
     this.#speedValue = el('strong', { text: 'x1.0' });
     this.#sizeValue = el('strong', { text: 'x1.0' });
+    this.#qualityButton = button(
+      { class: 'admin-btn admin-btn--utility', onClick: () => this.#toggleQuality() },
+      ['🎮 Qualité : Ultra'],
+    );
 
     this.body.append(
       this.#section('💰 Économie & Ressources', [
@@ -53,16 +59,19 @@ export class AdminPanel extends Modal {
         button({ class: 'admin-btn admin-btn--pet', onClick: () => actions.spawnPet('huge') }, ['🔥 Spawner HUGE Cat Géant !']),
         button({ class: 'admin-btn admin-btn--gold', onClick: () => actions.spawnPet('golden') }, ['✨ Spawner Pet DORÉ (Golden)']),
         button({ class: 'admin-btn admin-btn--rainbow', onClick: () => actions.spawnPet('rainbow') }, ['🌈 Spawner Pet ARC-EN-CIEL (Rainbow)']),
+        button({ class: 'admin-btn admin-btn--utility', onClick: () => actions.activateGamepass('extra-pets') }, ['🐾 +15 Pets Équipés (Gamepass)']),
         this.#boostButton,
       ]),
       this.#section('📦 Monde, Coffres & Zones', [
         button({ class: 'admin-btn admin-btn--world', onClick: () => actions.spawnBossChest() }, ['👑 Faire apparaître un Coffre Boss ici']),
         button({ class: 'admin-btn admin-btn--danger', onClick: () => actions.nukeMap() }, ['💥 Tout Casser (Nuke Map)']),
         button({ class: 'admin-btn admin-btn--world', onClick: () => actions.unlockZone2() }, ['🔓 Débloquer Zone 2 Gratuitement']),
+        button({ class: 'admin-btn admin-btn--world', onClick: () => actions.unlockZone3() }, ['💎 Débloquer Zone 3 Gratuitement']),
       ]),
       this.#section('⚡ Joueur & Graphismes', [
         this.#slider('🏃 Vitesse du Joueur', this.#speedValue, 1, 3, 0.1, 1, (value) => actions.setPlayerSpeed(value)),
         this.#slider('🐾 Taille des Pets', this.#sizeValue, 0.5, 3, 0.1, 1, (value) => actions.setPetSize(value)),
+        this.#qualityButton,
         this.#moodButton,
       ]),
     );
@@ -100,6 +109,15 @@ export class AdminPanel extends Modal {
     this.#boostButton.setAttribute('aria-pressed', String(enabled));
     this.#boostButton.classList.toggle('is-active', enabled);
     this.#boostButton.replaceChildren(`⚔️ Boost Dégâts des Pets x10 : ${enabled ? 'ON' : 'OFF'}`);
+  }
+
+  #toggleQuality() {
+    // Bascule entre Performance FPS Max et Qualité Ultra.
+    const current = this.#qualityButton.textContent.includes('Ultra') ? 'performance' : 'ultra';
+    this.#actions.setQuality(current);
+    const label = current === 'ultra' ? '🎮 Qualité : Ultra' : '🎮 Qualité : Performance FPS Max';
+    this.#qualityButton.replaceChildren(label);
+    this.#qualityButton.classList.toggle('is-active', current === 'ultra');
   }
 
   #toggleMood() {

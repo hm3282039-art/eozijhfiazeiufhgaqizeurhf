@@ -1,0 +1,52 @@
+/* ==========================================================================
+   Bouton « Plein Écran » (en haut à droite, sous le bouton Admin)
+   ========================================================================== */
+
+.fullscreen-button {
+  position: absolute;
+  top: var(--edge);
+  right: calc(var(--edge) + 7.4rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border: 0.18rem solid var(--ink);
+  border-radius: 0.95rem;
+  background: linear-gradient(var(--blue-1), var(--blue-2));
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  text-shadow: var(--text-outline);
+  box-shadow: 0 0.35rem 0 var(--ink), 0 0.5rem 0.8rem rgba(29, 33, 64, 0.28);
+  cursor: pointer;
+  transition: transform 0.09s ease, filter 0.12s ease;
+}
+
+.fullscreen-button:hover {
+  filter: brightness(1.08) saturate(1.08);
+  transform: translateY(-0.18rem);
+}
+
+.fullscreen-button:active {
+  transform: translateY(0.2rem);
+}
+
+.fullscreen-button.is-active {
+  background: linear-gradient(var(--pink-1), var(--pink-2));
+}
+
+.fullscreen-button__icon {
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+/* Écrans étroits : se rapproche du bord droit. */
+@media (max-width: 760px) {
+  .fullscreen-button {
+    right: var(--edge);
+    top: auto;
+    bottom: calc(var(--edge) + 6.2rem);
+    font-size: 0.85rem;
+    padding: 0.35rem 0.7rem;
+  }
+}

@@ -17,6 +17,7 @@ import { createRainbowArch } from './props/RainbowArch.js';
 import { createEggPedestal } from './props/EggPedestal.js';
 import { createZoneGate } from './props/ZoneGate.js';
 import { createZone2 } from './zone2/createZone2.js';
+import { createZone3 } from './zone3/createZone3.js';
 import { BUSHES, ROCKS, TREES, isDecorationBlocked } from './layout/hubLayout.js';
 
 /**
@@ -34,6 +35,16 @@ export class World {
 
   /** La porte de la Zone 2 (mur laser, cadenas…). */
   gate;
+  /** La porte de la Zone 3 (mur laser, cadenas…). */
+  gate2;
+
+  /** Facteur de particules global (1 = tout, <1 = réduit pour la performance). */
+  particleFactor = 1;
+
+  /** L'éclairage (pour appliquer la qualité). */
+  get lighting() {
+    return this.#lighting;
+  }
 
   /** @param {import('three').Scene} scene */
   constructor(scene) {
@@ -71,8 +82,15 @@ export class World {
     this.gate = createZoneGate(WORLD.gate);
     this.#add(this.gate, WORLD.gate);
 
+    // Porte Zone 2 → Zone 3.
+    this.gate2 = createZoneGate(WORLD.gate2);
+    this.#add(this.gate2, WORLD.gate2);
+
     // ── Zone 2 : île au nord ─────────────────────────────────────────────────
     this.#add(createZone2());
+
+    // ── Zone 3 : île au nord de la Zone 2 (Mines de Cristal & Or) ─────────
+    this.#add(createZone3());
 
     // ── Jonction Zone 1 / Zone 2 : la bordure de pierres de la Zone 1 ────────
     // Ses pierres sont visuelles ; ces deux colliders invisibles empêchent de
@@ -83,6 +101,13 @@ export class World {
     const bounds = getWalkableBounds();
     this.collision.add({ type: 'box', minX: bounds.minX, maxX: WORLD.gate.x - gapHalf, minZ: borderZ - 0.6, maxZ: borderZ + 0.6 });
     this.collision.add({ type: 'box', minX: WORLD.gate.x + gapHalf, maxX: bounds.maxX, minZ: borderZ - 0.6, maxZ: borderZ + 0.6 });
+
+    // Jonction Zone 2 / Zone 3 : colliders de la porte Zone 3.
+    const borderZ2 = WORLD.zone2.island.minZ + 0.7;
+    const gapHalf2 = WORLD.gate2.halfOpening + WORLD.gate2.pillarSize + 0.15;
+    const bounds2 = getWalkableBounds();
+    this.collision.add({ type: 'box', minX: bounds2.minX, maxX: WORLD.gate2.x - gapHalf2, minZ: borderZ2 - 0.6, maxZ: borderZ2 + 0.6 });
+    this.collision.add({ type: 'box', minX: WORLD.gate2.x + gapHalf2, maxX: bounds2.maxX, minZ: borderZ2 - 0.6, maxZ: borderZ2 + 0.6 });
   }
 
   /**
@@ -93,6 +118,11 @@ export class World {
    */
   update(dt, time, focus) {
     for (const entity of this.#updatables) entity.update(dt, time, focus);
+  }
+
+  /** Applique un préréglage de qualité à l'éclairage (ombres + résolution). */
+  setQuality(preset) {
+    this.#lighting.setQuality(preset);
   }
 
   /** Bascule l'ambiance du monde : 'day' (jour) ou 'sunset' (coucher de soleil doré). */

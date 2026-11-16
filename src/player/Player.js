@@ -5,6 +5,7 @@ import { clamp } from '../utils/math.js';
 import { createPlayerModel } from './PlayerModel.js';
 import { PlayerAnimator } from './PlayerAnimator.js';
 import { PlayerController } from './PlayerController.js';
+import { Hoverboard } from './Hoverboard.js';
 
 /**
  * Le joueur : avatar stylisé (tête, torse, bras et jambes articulés), déplacement, saut et ombre.
@@ -21,6 +22,10 @@ export class Player {
   velocity = new THREE.Vector3();
   /** Multiplicateur de vitesse de déplacement (panneau Admin : curseur 1–3). */
   speedMultiplier = 1;
+  /** Le hoverboard est-il activé (touche H) ? */
+  hoverboardActive = false;
+  /** Objet 3D du hoverboard (attaché sous l'avatar). */
+  hoverboard = null;
 
   #model;
   #animator;
@@ -42,6 +47,9 @@ export class Player {
 
     this.#shadow = new BlobShadow(0.95, 0.34);
     this.object3D.add(this.#shadow.mesh);
+
+    // Hoverboard (planche volante, invisible au départ).
+    this.hoverboard = new Hoverboard(this.object3D);
 
     this.#animator = new PlayerAnimator(this.#model);
     this.#controller = new PlayerController(this, input, collision);
@@ -87,8 +95,28 @@ export class Player {
       time,
     });
 
+    this.hoverboard?.update(dt, time);
     this.#syncVisuals();
     return { touched };
+  }
+
+  /**
+   * Active / désactive le hoverboard : vitesse ×1,8 et flottaison au-dessus du sol.
+   * @param {boolean} active
+   */
+  setHoverboard(active) {
+    this.hoverboardActive = active;
+    this.hoverboard?.setActive(active);
+    if (active) {
+      this.speedMultiplier = GAME_CONFIG.hoverboard.speedMultiplier;
+      this.altitude = GAME_CONFIG.hoverboard.floatHeight;
+      this.isGrounded = false;
+    } else {
+      // On laisse le curseur Admin s'appliquer : on ne force plus la vitesse.
+      this.altitude = 0;
+      this.isGrounded = true;
+    }
+    this.#syncVisuals();
   }
 
   #syncVisuals() {

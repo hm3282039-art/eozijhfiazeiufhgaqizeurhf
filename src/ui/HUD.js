@@ -29,6 +29,7 @@ export class HUD {
   #zoneBanner;
   #panels;
   #adminPanel = null;
+  #actionBar = null;
   #actions;
 
   /**
@@ -58,13 +59,18 @@ export class HUD {
    *       setPlayerSpeed: (value: number) => void,
    *       setPetSize: (value: number) => void,
    *       toggleMood: () => string,
+   *       setQuality: (quality: string) => void,
    *     },
    *   },
    * }} dependencies
    */
-  constructor({ root, events, wallet, pets, shop, breakables, floatingText, actions }) {
+  constructor({ root, events, wallet, pets, shop, breakables, floatingText, fpsCounter, fullscreenButton, actions }) {
     this.#actions = actions;
-    const petsPanel = new PetsPanel();
+    const petsPanel = new PetsPanel({
+      onEquipBest: () => actions.equipBest?.(),
+      onToggleEquip: (pet) => actions.toggleEquip?.(pet),
+      equipState: (speciesId, rarityId) => actions.isEquipped?.(speciesId, rarityId) ?? false,
+    });
     const shopPanel = new ShopPanel({
       shop,
       onBuy: (egg) => this.#buyEgg(shop, egg),
@@ -82,7 +88,9 @@ export class HUD {
       onPets: () => this.#togglePanel(petsPanel),
       onShop: () => this.#togglePanel(shopPanel),
       onTeleport: () => this.#togglePanel(teleportPanel),
+      onHoverboard: actions.toggleHoverboard,
     });
+    this.#actionBar = actionBar;
 
     const helpBox = new HelpBox({
       onCycleAnimation: actions.cycleAnimation,
@@ -99,8 +107,10 @@ export class HUD {
     root.replaceChildren(
       this.#currencyBar.element,
       zoneBanner.element,
+      fpsCounter?.element,
       helpBox.element,
       adminButton.element,
+      fullscreenButton?.element,
       actionBar.element,
       this.#toasts.element,
       ...this.#panels.map((panel) => panel.element),
@@ -115,7 +125,7 @@ export class HUD {
     const showPets = ({ pets: list, count, max }) => {
       // Tous les pets possédés sont équipés : « (équipés/possédés) ».
       actionBar.setPetCount(count, count);
-      petsPanel.setPets({ pets: list, max });
+      petsPanel.setPets({ pets: list, max, collection: pets.collection, discovered: pets.discoveredCount });
       helpBox.setCanRemoveTestPet(list.some((pet) => pet.isTest));
     };
     showPets({ pets: pets.pets, count: pets.count, max: pets.maxCount });
@@ -130,8 +140,9 @@ export class HUD {
 
     events.on(EVENTS.PET_ANIMATION_CHANGED, (style) => helpBox.setAnimationName(style.label));
 
-    events.on(EVENTS.GATE_BLOCKED, ({ price }) => {
-      this.#toasts.show(`Zone 2 verrouillée : il faut ${formatNumber(price)} pièces !`, {
+    events.on(EVENTS.GATE_BLOCKED, ({ price, zone = 2 }) => {
+      const zoneLabel = zone === 3 ? 'Zone 3' : 'Zone 2';
+      this.#toasts.show(`${zoneLabel} verrouillée : il faut ${formatNumber(price)} pièces !`, {
         variant: 'warning',
         icon: '🔒',
         key: 'gate-blocked',
@@ -143,6 +154,13 @@ export class HUD {
       zoneBanner.setZone(ZONES.find((zone) => zone.id === 'zone-2'));
       teleportPanel.refresh();
     });
+
+    // Lors d'un téléport, le bandeau indique la zone de destination.
+    events.on(EVENTS.PLAYER_TELEPORTED, (zone) => {
+      if (zone) this.#zoneBanner?.setZone(zone);
+    });
+
+    events.on(EVENTS.HOVERBOARD_CHANGED, ({ active }) => this.#actionBar?.setHoverboardActive(active));
 
     events.on(EVENTS.TOAST, ({ message, ...options }) => this.#toasts.show(message, options));
 
@@ -161,6 +179,11 @@ export class HUD {
   refreshZone2Unlocked() {
     const zone = ZONES.find((candidate) => candidate.id === 'zone-2');
     if (zone) this.#zoneBanner?.setZone(zone);
+    for (const panel of this.#panels) panel.refresh?.();
+  }
+
+  /** Rafraîchit les panneaux après un déblocage de la Zone 3 (le bandeau reste sur Zone 2). */
+  refreshZone3Unlocked() {
     for (const panel of this.#panels) panel.refresh?.();
   }
 

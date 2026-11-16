@@ -6,7 +6,7 @@ import { RARITIES } from './config/rarityConfig.js';
 import { HATCH_EGGS } from './config/eggCatalog.js';
 import { WORLD } from './config/worldConfig.js';
 import { ZONES, zoneState } from './config/zones.js';
-import { createRenderer } from './core/createRenderer.js';
+import { createRenderer, applyQuality } from './core/createRenderer.js';
 import { EVENTS, EventBus } from './core/EventBus.js';
 import { GameLoop } from './core/GameLoop.js';
 import { InputManager } from './core/InputManager.js';
@@ -20,8 +20,12 @@ import { Player } from './player/Player.js';
 import { HUD } from './ui/HUD.js';
 import { AdminPanel } from './ui/panels/AdminPanel.js';
 import { FloatingText } from './ui/components/FloatingText.js';
+import { FpsCounter } from './ui/components/FpsCounter.js';
+import { FullscreenButton } from './ui/components/FullscreenButton.js';
 import { formatNumber } from './utils/format.js';
 import { World } from './world/World.js';
+import { SpawnEggs } from './world/props/SpawnEggs.js';
+import { HatchSequencer } from './ui/HatchSequencer.js';
 
 /**
  * Le jeu : crée tous les systèmes, les relie entre eux et fait tourner la boucle principale.
@@ -47,6 +51,14 @@ export class Game {
   #roundCursor = 0;
   /** Gamepasses activés (id de `config/eggCatalog.js`). */
   #gamepasses = new Set();
+  /** Qualité graphique active (`'performance'` | `'ultra'`). */
+  #quality = GAME_CONFIG.defaultQuality;
+  /** Gestionnaire des 3 œufs 3D du spawn. */
+  spawnEggs = null;
+  /** Séquenceur d'éclosion (animation cinématique). */
+  hatchSequencer = null;
+  /** Élément DOM de la bulle de proximité (créé à l'init). */
+  #eggBubble = null;
 
   #loop = new GameLoop((dt) => this.#frame(dt));
 
@@ -71,6 +83,11 @@ export class Game {
     // ── Monde + joueur ───────────────────────────────────────────────────────
     this.input = new InputManager(window);
     this.world = new World(this.scene);
+    // ── Les 3 œufs 3D du spawn (Zone 1) ─────────────────────────────────────
+    this.spawnEggs = new SpawnEggs(this.scene);
+    for (const collider of this.spawnEggs.colliders) this.world.collision.add(collider);
+    this.hatchSequencer = new HatchSequencer({ scene: this.scene, camera: this.cameraRig.camera, loot: null, addPet: (config) => this.pets.addPet(config, { at: this.player.position, animate: false }), toast: (msg, opts) => this.#toast(msg, opts) });
+    this.#createEggBubble();
 
     this.player = new Player({ input: this.input, collision: this.world.collision });
     this.scene.add(this.player.object3D);
@@ -88,6 +105,7 @@ export class Game {
     // FloatingText (barres de vie / chiffres) + butin & confettis, puis les Breakables.
     this.floatingText = new FloatingText(this.#hudRoot);
     this.loot = new LootMagnet(this.scene);
+    this.hatchSequencer.loot = this.loot;
     this.breakables = new BreakableManager(this.scene, {
       floatingText: this.floatingText,
       loot: this.loot,
@@ -100,6 +118,10 @@ export class Game {
     await Promise.all(STARTER_PETS.map((species) => this.pets.addPet({ species }, { animate: false })));
 
     // ── Interface ────────────────────────────────────────────────────────────
+    // Compteur de FPS (en haut) + bouton Plein Écran (en haut à droite).
+    this.fpsCounter = new FpsCounter();
+    this.fullscreenButton = new FullscreenButton({ onChange: (active) => this.events.emit(EVENTS.FULLSCREEN_CHANGED, { active }) });
+
     this.hud = new HUD({
       root: this.#hudRoot,
       events: this.events,
@@ -108,14 +130,20 @@ export class Game {
       shop: this.shop,
       breakables: this.breakables,
       floatingText: this.floatingText,
+      fpsCounter: this.fpsCounter,
+      fullscreenButton: this.fullscreenButton,
       actions: {
         teleportTo: (zone) => this.teleportTo(zone),
         cycleAnimation: () => this.cyclePetAnimation(),
         addTestPet: () => this.addTestPet(),
         removeTestPet: () => this.removeTestPet(),
+        equipBest: () => this.equipBestPets(),
+        toggleEquip: (pet) => this.toggleEquip(pet),
+        isEquipped: (speciesId, rarityId) => this.pets.isEquipped(speciesId, rarityId),
         openAdmin: () => this.adminPanel.open(),
         activateGamepass: (id) => this.activateGamepass(id),
         hasGamepass: (id) => this.hasGamepass(id),
+        toggleHoverboard: () => this.toggleHoverboard(),
         admin: {
           addCoins: (amount) => this.#addCurrency('coins', amount),
           addDiamonds: (amount) => this.#addCurrency('diamonds', amount),
@@ -135,9 +163,11 @@ export class Game {
           spawnBossChest: () => this.spawnBossChest(),
           nukeMap: () => this.nukeMap(),
           unlockZone2: () => this.#unlockZone2(true),
+          unlockZone3: () => this.#unlockZone3(true),
           setPlayerSpeed: (value) => this.player.speedMultiplier = value,
           setPetSize: (value) => this.pets.setSizeMultiplier(value),
           toggleMood: () => this.toggleMood(),
+          setQuality: (quality) => this.setQuality(quality),
         },
       },
     });
@@ -155,7 +185,23 @@ export class Game {
         event.preventDefault();
         this.adminPanel.toggle();
       }
+      // E : éclore l'œuf le plus proche (si dans la portée).
+      if (event.code === 'KeyE' && !event.repeat) {
+        const egg = this.spawnEggs?.nearest(this.player.position, GAME_CONFIG.egg.proximityDistance);
+        if (egg) {
+          event.preventDefault();
+          this.hatchEgg(egg.def);
+        }
+      }
+      // H : hoverboard (planche volante).
+      if (event.code === 'KeyH' && !event.repeat) {
+        event.preventDefault();
+        this.toggleHoverboard();
+      }
     });
+
+    // Qualité graphique initiale (ombres + résolution d'ombre).
+    this.setQuality(this.#quality);
 
     // Compile les shaders et dessine une première image avant de retirer l'écran de chargement.
     this.renderer.compile(this.scene, this.cameraRig.camera);
@@ -207,6 +253,19 @@ export class Game {
     if (pet) this.#toast(`${pet.name} est rentré à la maison.`, { icon: '👋' });
   }
 
+  /** Équipe les meilleurs pets de la collection (bouton « Équiper les Meilleurs »). */
+  async equipBestPets() {
+    await this.pets.equipBest();
+    this.#toast('⚔️ Les meilleurs pets sont équipés !', { variant: 'success', icon: '⚔️' });
+  }
+
+  /** Équipe / déséquipe un pet (clic sur une carte de l'inventaire). */
+  toggleEquip(pet) {
+    if (!pet || pet.isTest) return;
+    this.pets.unequip(pet);
+    this.#toast(`${pet.name} est rentré à la maison.`, { icon: '👋' });
+  }
+
   // ── Actions de l'Admin Panel ───────────────────────────────────────────────
 
   /** Ajoute une monnaie (Admin). */
@@ -247,6 +306,89 @@ export class Game {
       const icons = { huge: '🔥', titanic: '🦣', gargantuan: '🐉' };
       this.#toast(`${pet.name} rejoint ton équipe !`, { variant: 'success', icon: icons[variant] ?? '✨' });
     }
+  }
+
+  /** Crée l'élément DOM de la bulle de proximité (créé une fois, déplacé chaque frame). */
+  #createEggBubble() {
+    this.#eggBubble = document.createElement('div');
+    this.#eggBubble.className = 'egg-bubble';
+    this.#eggBubble.hidden = true;
+    this.#hudRoot.appendChild(this.#eggBubble);
+  }
+
+  /** Met à jour la bulle de proximité selon l'œuf le plus proche du joueur. */
+  #updateEggBubble() {
+    const egg = this.spawnEggs?.nearest(this.player.position, GAME_CONFIG.egg.proximityDistance);
+    if (!egg) {
+      this.#eggBubble.hidden = true;
+      return;
+    }
+
+    const preview = SpawnEggs.rollPreview(egg.def);
+    const screen = this.screenPos(egg.position.x, 2.6, egg.position.z);
+    if (!screen) {
+      this.#eggBubble.hidden = true;
+      return;
+    }
+
+    const petsHtml = preview.entries
+      .map((e) => `<span class="egg-bubble__pet">${e.species.name}<span class="egg-bubble__pet-chance">${(e.chance * 100).toFixed(1)}%</span></span>`)
+      .join('');
+
+    this.#eggBubble.innerHTML =
+      `<div class="egg-bubble__title">${egg.def.emoji} ${egg.def.name}</div>` +
+      `<div class="egg-bubble__pets">${petsHtml}</div>` +
+      (egg.def.hugeChance > 0 ? `<div class="egg-bubble__pet egg-bubble__pet-chance">🔥 HUGE : ${(egg.def.hugeChance * 100).toFixed(1)}%</div>` : '') +
+      `<span class="egg-bubble__action">[E] Appuyer sur E pour Ouvrir</span>`;
+
+    this.#eggBubble.hidden = false;
+    this.#eggBubble.style.left = `${screen.x}px`;
+    this.#eggBubble.style.top = `${screen.y}px`;
+  }
+
+  /**
+   * Bascule le hoverboard (touche H ou bouton).
+   * @returns {boolean} l'état actif
+   */
+  toggleHoverboard() {
+    const active = !this.player.hoverboardActive;
+    this.player.setHoverboard(active);
+    this.events.emit(EVENTS.HOVERBOARD_CHANGED, { active });
+    this.#toast(active ? '🛹 Hoverboard activé ! (vitesse ×1,8)' : '🛹 Hoverboard désactivé', { variant: active ? 'success' : 'info', icon: '🛹' });
+    return active;
+  }
+
+  /**
+   * Éclost un œuf (touche E ou clic sur la bulle). Tire un pet via la boutique
+   * puis lance l'animation d'éclosion.
+   * @param {object} eggDef définition dans `config/eggCatalog.js`
+   */
+  hatchEgg(eggDef) {
+    if (!eggDef || this.hatchSequencer?.isActive) return;
+    // Tirage du pet (même logique pondérée que la boutique).
+    const roll = this.shop.rollEgg(eggDef);
+    this.hatchSequencer.start(eggDef, { species: roll.species, rarity: roll.rarity.id });
+    this.events.emit(EVENTS.EGG_HATCHED, { eggDef, roll });
+  }
+
+  /**
+   * Applique un préréglage de qualité (ombres + résolution d'ombre + particules).
+   * @param {'performance' | 'ultra'} quality
+   */
+  setQuality(quality) {
+    const preset = GAME_CONFIG.quality[quality] ?? GAME_CONFIG.quality.ultra;
+    this.#quality = quality;
+    applyQuality(this.renderer, preset);
+    this.world.lighting?.setQuality?.(preset);
+    // Facteur de particules global (utilisé par les décors / étincelles).
+    this.world.particleFactor = preset.particles;
+    this.events.emit(EVENTS.QUALITY_CHANGED, { quality, preset });
+    return quality;
+  }
+
+  /** Qualité graphique active. */
+  get quality() {
+    return this.#quality;
   }
 
   /** Un gamepass est-il activé ? @param {string} id */
@@ -345,17 +487,48 @@ export class Game {
     return true;
   }
 
-  /** Petite explosion de fête + pluie de confettis dorés (déblocage de la Zone 2). */
-  #celebrateUnlock() {
-    this.loot.explodeConfetti(new THREE.Vector3(0, 0.6, WORLD.gate.z), ['#ffc93c', '#ffd94d', '#fff3b0', '#ffffff']);
+  /**
+   * Débloque la Zone 3 : retire le prix (ou passe à 0 si `free`), éteint le mur laser,
+   * désactive son collider et lance une petite explosion de fête.
+   * @param {boolean} [free] si `true`, débloque gratuitement (Admin)
+   * @returns {boolean} `true` si le déblocage a eu lieu
+   */
+  #unlockZone3(free = false) {
+    if (zoneState.zone3Unlocked) return false;
+
+    const { currency, amount } = ZONES[2].price;
+    if (!free) {
+      if (this.wallet.canAfford(currency, amount)) {
+        this.wallet.spend(currency, amount);
+      } else {
+        const missing = amount - this.wallet.getBalance(currency);
+        this.#toast(`Il te manque ${formatNumber(missing)} pièces !`, { variant: 'warning', icon: '🔒' });
+        return false;
+      }
+    }
+
+    zoneState.zone3Unlocked = true;
+    this.world.gate2.unlock();
+    this.world.collision.removeByTag('gate-laser');
+    this.#celebrateUnlock(WORLD.gate2.z);
+
+    this.events.emit(EVENTS.ZONE_UNLOCKED, { zone: ZONES[2] });
+    this.hud.refreshZone3Unlocked?.();
+    this.#toast('🎉 ZONE 3 DÉBLOQUÉE !', { variant: 'success', icon: '🎉', duration: 4200 });
+    return true;
+  }
+
+  /** Petite explosion de fête + pluie de confettis dorés (déblocage d'une zone). */
+  #celebrateUnlock(z = WORLD.gate.z) {
+    this.loot.explodeConfetti(new THREE.Vector3(0, 0.6, z), ['#ffc93c', '#ffd94d', '#fff3b0', '#ffffff']);
     for (let i = 0; i < 8; i++) {
       setTimeout(
         () => {
           if (i % 2 === 0) {
-            this.loot.burstLoot(new THREE.Vector3(0, 0.6, WORLD.gate.z), { coins: 100 });
+            this.loot.burstLoot(new THREE.Vector3(0, 0.6, z), { coins: 100 });
             this.wallet.add('coins', 100);
           }
-          this.loot.explodeConfetti(new THREE.Vector3((i % 4 - 1.5) * 3, 0.6, WORLD.gate.z + (i % 3 - 1) * 3), ['#ffc93c', '#ffd94d', '#ff5a7a']);
+          this.loot.explodeConfetti(new THREE.Vector3((i % 4 - 1.5) * 3, 0.6, z + (i % 3 - 1) * 3), ['#ffc93c', '#ffd94d', '#ff5a7a']);
         },
         i * 220,
       );
@@ -368,6 +541,11 @@ export class Game {
    */
   get zone2() {
     return zoneState.zone2Unlocked;
+  }
+
+  /** La Zone 3 est-elle débloquée ? */
+  get zone3() {
+    return zoneState.zone3Unlocked;
   }
 
   // ── Outils de débogage (console du navigateur : `game.debugStep(2)`) ────────
@@ -400,6 +578,7 @@ export class Game {
   #frame(dt) {
     this.#update(dt);
     this.#render();
+    this.fpsCounter?.tick(performance.now());
   }
 
   #update(dt) {
@@ -409,10 +588,19 @@ export class Game {
 
     const { touched } = player.update(dt, time, this.cameraRig.getForward());
     if (touched === 'gate-laser') {
-      this.events.emit(EVENTS.GATE_BLOCKED, { price: WORLD.gate.price });
+      // Distingue les deux portes par la distance à leur position : la plus proche.
+      const dGate = Math.abs(player.position.z - WORLD.gate.z);
+      const dGate2 = Math.abs(player.position.z - WORLD.gate2.z);
+      if (dGate2 < dGate) {
+        this.events.emit(EVENTS.GATE_BLOCKED, { price: WORLD.gate2.price, zone: 3 });
+      } else {
+        this.events.emit(EVENTS.GATE_BLOCKED, { price: WORLD.gate.price, zone: 2 });
+      }
     }
 
     this.pets.update(dt, time, player);
+    this.spawnEggs?.update(dt, time);
+    this.hatchSequencer?.update(dt);
     this.world.update(dt, time, player.position);
     this.breakables.update(dt, time);
 
@@ -425,6 +613,7 @@ export class Game {
 
     this.cameraRig.update(dt, this.#getCameraFocus());
     this.pets.updateLabels(this.cameraRig.camera);
+    this.#updateEggBubble();
     this.floatingText.update(this.cameraRig.camera, this.breakables.breakables, this.pets.target, dt);
     this.input.endFrame();
   }
@@ -463,18 +652,31 @@ export class Game {
       return;
     }
 
-    // Cadenas ou panneau de la porte : déverrouillage.
-    const gateTarget = this.#pickGateTarget(event.clientX, event.clientY, camera);
-    if (gateTarget) this.#unlockZone2(false);
+    // Cadenas ou panneau d'une porte : déverrouillage (Zone 3 d'abord, sinon Zone 2).
+    const gate3Target = this.#pickGateTarget(event.clientX, event.clientY, camera, 3);
+    if (gate3Target) {
+      this.#unlockZone3(false);
+      return;
+    }
+    const gateTarget = this.#pickGateTarget(event.clientX, event.clientY, camera, 2);
+    if (gateTarget) {
+      this.#unlockZone2(false);
+      return;
+    }
 
     // Sinon : retour à la formation.
     this.pets.setTarget(null);
   };
 
-  /** Cherche un élément de la porte (cadenas / panneau) sous la souris. */
-  #pickGateTarget(clientX, clientY, camera) {
-    if (zoneState.zone2Unlocked) return false;
-    const targets = this.world.gate.lockTargets ?? [];
+  /**
+   * Cherche un élément de la porte (cadenas / panneau) sous la souris.
+   * @param {number} zone 2 (Zone 2) ou 3 (Zone 3)
+   */
+  #pickGateTarget(clientX, clientY, camera, zone = 2) {
+    const gate = zone === 3 ? this.world.gate2 : this.world.gate;
+    const unlocked = zone === 3 ? zoneState.zone3Unlocked : zoneState.zone2Unlocked;
+    if (unlocked || !gate) return false;
+    const targets = gate.lockTargets ?? [];
     if (targets.length === 0) return false;
 
     // Projette la grille raycaster au pixel pour identifier les objets.

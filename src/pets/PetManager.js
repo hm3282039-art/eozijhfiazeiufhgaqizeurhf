@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GAME_CONFIG } from '../config/gameConfig.js';
 import { PET_SPECIES } from '../config/petSpecies.js';
+import { getRarity } from '../config/rarityConfig.js';
 import { EVENTS } from '../core/EventBus.js';
 import { PetAnimator } from './animation/PetAnimator.js';
 import { DEFAULT_PET_ANIMATION, PET_ANIMATION_STYLES } from './animation/petAnimationStyles.js';
@@ -30,6 +31,8 @@ export class PetManager {
   #sizeMultiplier = 1;
   /** @type {number | null} surcharge de la taille d'équipe (Gamepass +15 Pets Équipés) */
   #maxCountOverride = null;
+  /** Ensemble des pets découverts (clés `species:rarity:variant`). */
+  #collection = new Set();
 
   /**
    * Appelé à chaque coup porté par un pet : `(pet, breakable) => void`.
@@ -61,6 +64,26 @@ export class PetManager {
 
   get count() {
     return this.#members.length;
+  }
+
+  /** Tous les pets découverts (clés `species:rarity:variant`). */
+  get collection() {
+    return this.#collection;
+  }
+
+  /** Un pet est-il découvert ? @param {string} speciesId @param {string} rarityId @param {string} [variant] */
+  isDiscovered(speciesId, rarityId, variant = 'normal') {
+    return this.#collection.has(`${speciesId}:${rarityId}:${variant}`);
+  }
+
+  /** Nombre de pets découverts. */
+  get discoveredCount() {
+    return this.#collection.size;
+  }
+
+  /** Un pet (espèce + rareté) est-il actuellement équipé ? */
+  isEquipped(speciesId, rarityId) {
+    return this.#members.some((m) => !m.pet.isTest && m.pet.species.id === speciesId && m.pet.rarity.id === rarityId);
   }
 
   get maxCount() {
@@ -124,6 +147,8 @@ export class PetManager {
     if (!species) throw new Error(`Espèce de pet inconnue : « ${config.species} »`);
 
     const pet = new Pet({ ...config, species });
+    // Enregistre dans la collection (pour l'index / la collection).
+    this.#collection.add(`${pet.species.id}:${pet.rarity.id}:${pet.variant}`);
     const member = {
       pet,
       movement: new PetMovement(pet, this.#collision),
@@ -157,6 +182,62 @@ export class PetManager {
     pet.dispose();
     this.#emitChange();
     return true;
+  }
+
+  /**
+   * Équipe un pet à partir de sa collection (crée une instance et l'ajoute à l'équipe).
+   * @param {string} speciesId
+   * @param {string} rarityId
+   * @param {string} [variant='normal']
+   * @returns {Promise<Pet | null>}
+   */
+  async equip(speciesId, rarityId, variant = 'normal') {
+    if (this.isFull) return null;
+    const species = PET_SPECIES[speciesId];
+    if (!species) throw new Error(`Espèce de pet inconnue : « ${speciesId} »`);
+    const pet = await this.addPet({ species, rarity: rarityId, variant }, { at: this.#formation.heading ? null : null });
+    return pet;
+  }
+
+  /**
+   * Déséquipe un pet (retiré de l'équipe, conservé dans la collection).
+   * @param {Pet} pet
+   */
+  unequip(pet) {
+    if (!pet || pet.isTest) return;
+    this.removePet(pet);
+  }
+
+  /**
+   * Équipe les meilleurs pets de la collection (tri par puissance de rareté).
+   * Remplace l'équipe actuelle.
+   * @returns {Promise<Pet[]>} les pets équipés
+   */
+  async equipBest() {
+    // Trie les découverts par puissance de rareté (décroissant), puis par variante.
+    const entries = [...this.#collection].sort((a, b) => {
+      const [sa, ra] = a.split(':');
+      const [sb, rb] = b.split(':');
+      const pa = getRarity(ra).power;
+      const pb = getRarity(rb).power;
+      if (pb !== pa) return pb - pa;
+      return sb.localeCompare(sa);
+    });
+
+    // Déséquipe tout le monde (sauf les tests).
+    for (const member of [...this.#members]) {
+      if (!member.pet.isTest) this.removePet(member.pet);
+    }
+
+    // Équipe les meilleurs jusqu'à remplir l'équipe.
+    const equipped = [];
+    for (const key of entries) {
+      if (this.isFull) break;
+      const [speciesId, rarityId, variant] = key.split(':');
+      const pet = await this.equip(speciesId, rarityId, variant);
+      if (pet) equipped.push(pet);
+    }
+    return equipped;
   }
 
   /** Retire le dernier pet de test ajouté. @returns {Pet | null} */

@@ -1,0 +1,75 @@
+/* ==========================================================================
+   Éclosion d'œuf : overlay d'assombissement + bulle de proximité
+   ========================================================================== */
+
+/* Assombrissement de l'écran pendant l'éclosion. */
+.hatch-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(10, 12, 28, 0.55), rgba(10, 12, 28, 0.85));
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+/* Bulle de proximité au-dessus d'un œuf (affichée par le jeu). */
+.egg-bubble {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  padding: 0.6rem 0.9rem;
+  border-radius: 1rem;
+  border: 0.18rem solid var(--ink);
+  background: linear-gradient(rgba(20, 24, 45, 0.92), rgba(20, 24, 45, 0.82));
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-shadow: var(--text-outline);
+  box-shadow: 0 0.3rem 0.6rem rgba(29, 33, 64, 0.4);
+  pointer-events: none;
+  z-index: 30;
+  max-width: 240px;
+  text-align: center;
+}
+
+.egg-bubble__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  color: #ffd23f;
+}
+
+.egg-bubble__pets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.4rem;
+}
+
+.egg-bubble__pet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.egg-bubble__pet-chance {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+.egg-bubble__action {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(var(--green-1), var(--green-2));
+  border: 0.14rem solid var(--ink);
+  font-weight: 700;
+  animation: egg-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes egg-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}

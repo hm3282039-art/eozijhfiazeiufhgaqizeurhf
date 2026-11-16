@@ -1,0 +1,48 @@
+/* ==========================================================================
+   Compteur de FPS (en haut à gauche)
+   ========================================================================== */
+
+.fps-counter {
+  position: absolute;
+  top: var(--edge);
+  left: var(--edge);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.9rem;
+  border: 0.18rem solid var(--ink);
+  background: linear-gradient(rgba(20, 24, 45, 0.78), rgba(20, 24, 45, 0.6));
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: var(--text-outline);
+  box-shadow: 0 0.3rem 0.6rem rgba(29, 33, 64, 0.25);
+}
+
+.fps-counter__icon {
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+.fps-counter__value {
+  letter-spacing: 0.02em;
+}
+
+/* État selon la fluidité. */
+.fps-counter.is-mid .fps-counter__value {
+  color: #ffd23f;
+}
+
+.fps-counter.is-low .fps-counter__value {
+  color: #ff5a7a;
+}
+
+/* Écrans étroits : plus discret. */
+@media (max-width: 760px) {
+  .fps-counter {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+  }
+}

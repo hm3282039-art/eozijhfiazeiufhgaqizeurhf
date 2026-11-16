@@ -42,9 +42,6 @@ export function applyQuality(renderer, quality) {
   if (quality.shadows) {
     renderer.shadowMap.needsUpdate = true;
   }
-  // La taille de la texture d'ombre : on change la taille réelle du renderer,
-  // puis on laisse le monde (ombres) se reconfigurer au prochain frame.
+  // Le monde (éclairage) reconfigure la résolution d'ombre via `world.setQuality`.
   renderer.shadowMap.autoUpdate = true;
-  // Stocke les préréglages pour que le monde puisse y accéder.
-  renderer.userData.quality = quality;
 }

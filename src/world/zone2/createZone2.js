@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PALETTE } from '../../config/palette.js';
 import { WORLD } from '../../config/worldConfig.js';
-import { createToyMaterial, goldMaterial } from '../../graphics/materials.js';
+import { createToyMaterial } from '../../graphics/materials.js';
 import { createGrassTexture } from '../terrain/grassTexture.js';
 import { createCliffBody, createCliffRocks } from '../terrain/Island.js';
 import { createStoneBorder } from '../terrain/StoneBorder.js';
@@ -73,39 +73,13 @@ function createEmeraldLawn(width, length) {
   return lawn;
 }
 
-/** Socle doré du Coffre Boss Géant. */
-function createBossPedestal(x, z) {
-  const group = new THREE.Group();
-  group.name = 'BossPedestal';
-  group.position.set(x, 0, z);
-
-  const base = new THREE.Mesh(
-    new RoundedBoxGeometry(7.5, 0.3, 7.5, 4, 0.15),
-    createToyMaterial({ color: PALETTE.stone.light, roughness: 0.7 }),
-  );
-  base.position.y = 0.15;
-  base.receiveShadow = true;
-  base.castShadow = true;
-
-  const ring = new THREE.Mesh(
-    new THREE.CylinderGeometry(3.6, 3.9, 0.25, 36),
-    goldMaterial({ roughness: 0.35 }),
-  );
-  ring.position.y = 0.3;
-  ring.castShadow = true;
-  ring.receiveShadow = true;
-
-  group.add(base, ring);
-  return group;
-}
-
 /**
  * La Zone 2 : île au nord de la Zone 1, reliée par la porte.
  * Sa dalle passe sous la pelouse de la Zone 1 (aucune couture), et sa bordure
  * de pierres ne couvre que les côtés ouest / est / nord.
  */
 export function createZone2() {
-  const { island, bossChest } = WORLD.zone2;
+  const { island } = WORLD.zone2;
   const width = island.maxX - island.minX;
   const length = island.maxZ - island.minZ;
   const centerX = (island.minX + island.maxX) / 2;
@@ -144,9 +118,6 @@ export function createZone2() {
     clusterCount: 30,
   });
   group.add(flowers.object3D);
-
-  // Socle du Coffre Boss Géant.
-  group.add(createBossPedestal(bossChest.x, bossChest.z));
 
   return {
     object3D: group,

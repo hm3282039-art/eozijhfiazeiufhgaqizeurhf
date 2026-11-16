@@ -225,3 +225,225 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* ── Onglets de l'Inventaire ─────────────────────────────────────────── */
+
+.pets-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.pets-tab {
+  padding: 0.4rem 1.1rem 0.5rem;
+  border: 0.22rem solid var(--ink);
+  border-radius: 0.95rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 0 var(--ink);
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.12s ease;
+}
+
+.pets-tab:hover {
+  filter: brightness(0.96);
+  transform: translateY(-0.1rem);
+}
+
+.pets-tab.is-active {
+  background: linear-gradient(var(--pink-1), var(--pink-2));
+  color: #fff;
+  text-shadow: var(--text-outline);
+}
+
+.pets-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+/* Bouton « Équiper les Meilleurs ». */
+.equip-best-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.4rem 0.6rem;
+  margin-bottom: 0.7rem;
+  border: 0.24rem solid var(--ink);
+  border-radius: 1rem;
+  background: linear-gradient(var(--purple-1, #b08bff), var(--purple-2, #7c4dff));
+  box-shadow: 0 0.3rem 0 var(--ink), inset 0 0.22rem 0 rgba(255, 255, 255, 0.45);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-shadow: var(--text-outline);
+  cursor: pointer;
+}
+
+.equip-best-btn:hover {
+  filter: brightness(1.08);
+}
+
+.pets-tab__hint {
+  margin-bottom: 0.7rem;
+}
+
+/* Carte de pet clicquable (équiper/déséquiper). */
+.pet-card.is-clickable {
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.12s ease;
+}
+
+.pet-card.is-clickable:hover {
+  transform: translateY(-0.15rem);
+  filter: brightness(1.05);
+}
+
+.pet-card__damage {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #d0283b;
+}
+
+/* ── Index / Collection ──────────────────────────────────────────────── */
+
+.index-section {
+  margin-bottom: 1.1rem;
+}
+
+.index-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.index-section__dot {
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 0.18rem solid var(--ink);
+}
+
+.pet-grid--index {
+  grid-template-columns: repeat(auto-fill, minmax(6.4rem, 1fr));
+}
+
+.pet-card--index {
+  padding: 0.4rem 0.4rem 0.5rem;
+}
+
+.pet-card__portrait--silhouette {
+  display: grid;
+  place-items: center;
+  background: #20242e;
+  color: #5a6478;
+  font-size: 2.4rem;
+  font-weight: 700;
+}
+
+.pet-card.is-locked .pet-card__name {
+  color: #8d97b5;
+}
+
+/* ── Onglet « Prêt à venir » ──────────────────────────────────────────── */
+
+.coming-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.9rem;
+}
+
+.coming-group {
+  padding: 0.8rem 0.9rem;
+  border: 0.22rem solid var(--ink);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 0 var(--ink);
+}
+
+.coming-group__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.coming-group__desc {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem;
+}
+
+.coming-group__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.coming-item {
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.7rem;
+  background: var(--panel-alt);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ── Tags de rareté ─────────────────────────────────────────────────── */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.5rem 0.18rem;
+  border: 0.16rem solid var(--ink);
+  border-radius: 0.6rem;
+  background: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tag--green { background: #43d17f; color: #fff; }
+.tag--blue { background: #4f8dff; color: #fff; }
+.tag--gold { background: #ffd23f; color: #262b47; }
+.tag--purple { background: #a45cff; color: #fff; }
+
+/* Couleur de fond par rareté (tag + point de l'index). */
+.tag--basic { background: #c3c9d6; color: #262b47; }
+.tag--rare { background: #43d17f; color: #fff; }
+.tag--epic { background: #4f8dff; color: #fff; }
+.tag--legendary { background: #ff9a2e; color: #fff; }
+.tag--mythical { background: #ff5a7a; color: #fff; }
+.tag--exotic { background: #a45cff; color: #fff; }
+.tag--divine { background: #ffe23a; color: #262b47; }
+.tag--superior { background: #27d3ee; color: #262b47; }
+.tag--celestial { background: #7db4ff; color: #fff; }
+.tag--secret { background: #20242e; color: #ff2ee0; }
+
+/* Boutique Exclusive : sections + gamepasses. */
+.shop-section {
+  margin-bottom: 1.1rem;
+}
+
+.shop-section__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.55rem;
+}
+
+.shop-item--pass .shop-item__pass {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 3.3rem;
+  height: 4.1rem;
+  border: 0.22rem solid var(--ink);
+  border-radius: 1rem;
+  font-size: 2.2rem;
+}
