@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PET_VARIANTS_VISUAL, normalizeVariant } from '../config/variantConfig.js';
+import { getRarity } from '../config/rarityConfig.js';
 import { BlobShadow } from '../graphics/BlobShadow.js';
 import { PetLabel } from './PetLabel.js';
 import { loadPetModel } from './PetModelLoader.js';
@@ -53,19 +54,21 @@ export class Pet {
    *   name?: string,
    *   palette?: import('./procedural/species/index.js').PetPalette,
    *   modelUrl?: string | null,
-   *   variant?: string,   'normal' | 'golden' | 'rainbow' | 'huge' (voir `config/variantConfig.js`)
+   *   variant?: string,   'normal' | 'golden' | 'rainbow' | 'shiny' (voir `config/variantConfig.js`)
+   *   rarity?: string,   une rareté PS99 (voir `config/rarityConfig.js`), défaut « basic »
    *   isTest?: boolean,
    * }} config
    */
-  constructor({ species, name, palette, modelUrl, variant, isTest = false }) {
+  constructor({ species, name, palette, modelUrl, variant, rarity, isTest = false }) {
     this.id = nextId++;
     this.species = species;
     this.name = name ?? species.name;
     this.palette = palette ?? species.palette;
     this.modelUrl = modelUrl !== undefined ? modelUrl : species.modelUrl;
     this.variant = normalizeVariant(variant);
-    /** Multiplicateur de dégâts lié à la variante (doré ×3, arc-en-ciel ×5, HUGE ×2). */
-    this.damageMultiplier = PET_VARIANTS_VISUAL[this.variant].damageMultiplier;
+    this.rarity = getRarity(rarity);
+    /** Multiplicateur de dégâts = puissance de la rareté × variante (doré ×3, arc-en-ciel ×5…). */
+    this.damageMultiplier = this.rarity.power * PET_VARIANTS_VISUAL[this.variant].damageMultiplier;
     this.isTest = isTest;
 
     this.object3D = new THREE.Group();
@@ -113,7 +116,11 @@ export class Pet {
     // A. Modèle Blender (.glb)
     if (this.modelUrl) {
       try {
-        visual = await loadPetModel(this.modelUrl, { rotationY: this.species.modelRotationY ?? 0, variant: this.variant });
+        visual = await loadPetModel(this.modelUrl, {
+          rotationY: this.species.modelRotationY ?? 0,
+          variant: this.variant,
+          rarity: this.rarity.id,
+        });
       } catch (error) {
         console.warn(
           `[Pet] Modèle « ${this.modelUrl} » introuvable ou invalide pour ${this.name} → générateur procédural.`,
@@ -123,7 +130,12 @@ export class Pet {
     }
 
     // B. Générateur procédural (par défaut, ou en secours)
-    visual ??= buildProceduralPet({ builder: this.species.builder, palette: this.palette, variant: this.variant });
+    visual ??= buildProceduralPet({
+      builder: this.species.builder,
+      palette: this.palette,
+      variant: this.variant,
+      rarity: this.rarity.id,
+    });
 
     if (this.#disposed) {
       visual.dispose();

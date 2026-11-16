@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { ThirdPersonCamera } from './camera/ThirdPersonCamera.js';
 import { GAME_CONFIG } from './config/gameConfig.js';
-import { PET_VARIANTS, STARTER_PETS } from './config/petSpecies.js';
+import { PET_VARIANTS, PET_SPECIES, STARTER_PETS } from './config/petSpecies.js';
+import { RARITIES } from './config/rarityConfig.js';
+import { HATCH_EGGS } from './config/eggCatalog.js';
 import { WORLD } from './config/worldConfig.js';
 import { ZONES, zoneState } from './config/zones.js';
 import { createRenderer } from './core/createRenderer.js';
@@ -43,6 +45,8 @@ export class Game {
   #lastClickMs = 0;
   #mood = 'day';
   #roundCursor = 0;
+  /** Gamepasses activés (id de `config/eggCatalog.js`). */
+  #gamepasses = new Set();
 
   #loop = new GameLoop((dt) => this.#frame(dt));
 
@@ -74,7 +78,12 @@ export class Game {
     // ── Économie + systèmes de combat ─────────────────────────────────────────
     this.wallet = new Wallet(this.events);
     this.pets = new PetManager({ scene: this.scene, collision: this.world.collision, events: this.events });
-    this.shop = new Shop({ wallet: this.wallet, pets: this.pets, getHatchPoint: () => this.player.position });
+    this.shop = new Shop({
+      wallet: this.wallet,
+      pets: this.pets,
+      getHatchPoint: () => this.player.position,
+      flags: { ultraChance: () => this.hasGamepass('ultra-chance') },
+    });
 
     // FloatingText (barres de vie / chiffres) + butin & confettis, puis les Breakables.
     this.floatingText = new FloatingText(this.#hudRoot);
@@ -105,6 +114,8 @@ export class Game {
         addTestPet: () => this.addTestPet(),
         removeTestPet: () => this.removeTestPet(),
         openAdmin: () => this.adminPanel.open(),
+        activateGamepass: (id) => this.activateGamepass(id),
+        hasGamepass: (id) => this.hasGamepass(id),
         admin: {
           addCoins: (amount) => this.#addCurrency('coins', amount),
           addDiamonds: (amount) => this.#addCurrency('diamonds', amount),
@@ -205,18 +216,82 @@ export class Game {
     this.#toast(`+${formatNumber(amount)} ${label}`, { variant: 'success', icon: currency === 'coins' ? '🪙' : '💎' });
   }
 
-  /** Spawn de variantes de pets (Admin). */
+  /** Spawn d'un pet par rareté / variante (Admin) — HUGE / TITANIC / GARGANTUAN + variantes. */
   async #spawnVariantPet(variant) {
     if (this.pets.isFull) {
       this.#toast(`Maximum de ${this.pets.maxCount} pets atteint !`, { variant: 'warning', icon: '🐾' });
       return;
     }
-    const names = { huge: 'HUGE Cat Géant', golden: 'Golden Pet', rainbow: 'Rainbow Pet' };
+    // Un id de rareté spéciale (huge/titanic/gargantuan) est traité comme une rareté ;
+    // golden/rainbow/shiny sont des variantes visuelles.
+    const isSpecialRarity = RARITIES[variant] && RARITIES[variant].special;
+    const names = {
+      huge: 'HUGE Cat Géant',
+      titanic: 'TITANIC Cat Géant',
+      gargantuan: 'GARGANTUAN Cat Géant',
+      golden: 'Golden Pet',
+      rainbow: 'Rainbow Pet',
+      shiny: 'Shiny Pet',
+    };
     const pet = await this.pets.addPet(
-      { species: 'cat', name: names[variant], variant, isTest: true },
+      {
+        species: 'cat',
+        name: names[variant] ?? variant,
+        variant: isSpecialRarity ? 'normal' : variant,
+        rarity: isSpecialRarity ? variant : 'legendary',
+        isTest: true,
+      },
       { at: this.player.position },
     );
-    if (pet) this.#toast(`${pet.name} rejoint ton équipe !`, { variant: 'success', icon: variant === 'huge' ? '🔥' : '✨' });
+    if (pet) {
+      const icons = { huge: '🔥', titanic: '🦣', gargantuan: '🐉' };
+      this.#toast(`${pet.name} rejoint ton équipe !`, { variant: 'success', icon: icons[variant] ?? '✨' });
+    }
+  }
+
+  /** Un gamepass est-il activé ? @param {string} id */
+  hasGamepass(id) {
+    return this.#gamepasses.has(id);
+  }
+
+  /**
+   * Active un gamepass (Boutique Exclusive) et applique son effet immédiat.
+   * @param {string} id id de `config/eggCatalog.js`
+   * @returns {boolean} vrai si activé (ou déjà activé)
+   */
+  activateGamepass(id) {
+    if (this.#gamepasses.has(id)) return true;
+    this.#gamepasses.add(id);
+
+    switch (id) {
+      case 'extra-pets':
+        // 15 slots d'équipe supplémentaires.
+        this.pets.setMaxCountDelta(15);
+        this.events.emit(EVENTS.PETS_CHANGED, this.pets);
+        break;
+      case 'super-magnet':
+        // Aimant plus large (rapide, valeur référencée par LootMagnet si disponible).
+        if (this.loot && typeof this.loot.setMagnetRange === 'function') this.loot.setMagnetRange(2.6);
+        break;
+      case 'vip':
+        this.#toast('VIP activé : bonus de pièces à chaque éclosion !', { variant: 'success', icon: '👑' });
+        break;
+      case 'auto-hatch':
+        this.#toast('Auto-Hatch activé : les œufs du spawn éclosent instantanément !', { variant: 'success', icon: '🥚' });
+        break;
+      case 'ultra-chance':
+        this.#toast('Ultra Chance activé : chances de rareté et de HUGE doublées !', { variant: 'success', icon: '🍀' });
+        break;
+      default:
+        break;
+    }
+
+    this.events.emit(EVENTS.TOAST, {
+      variant: 'success',
+      icon: '🎫',
+      message: `Gamepass activé !`,
+    });
+    return true;
   }
 
   /** Fait tomber un Coffre Boss devant le joueur (Admin). */

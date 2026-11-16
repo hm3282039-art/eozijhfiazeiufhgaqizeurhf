@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { createCanvas, drawOutlinedText, fontStyle } from '../graphics/canvas.js';
+import { createCanvas, drawOutlinedText, roundRectPath, fontStyle } from '../graphics/canvas.js';
 import { clamp } from '../utils/math.js';
+import { getRarity } from '../config/rarityConfig.js';
 
 const CANVAS_WIDTH = 512;
 const CANVAS_HEIGHT = 128;
@@ -23,15 +24,21 @@ const MIN_SCALE = 0.3;
 export class PetLabel {
   #texture;
 
-  /** @param {string} text */
-  constructor(text) {
+  /**
+   * @param {string} text
+   * @param {{ rarity?: string }} [opts] `rarity` : rareté PS99 (affichée sous le nom)
+   */
+  constructor(text, { rarity = 'basic' } = {}) {
     const { canvas, ctx } = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
+    const rarityDef = getRarity(rarity);
+    const showRarity = rarity !== 'basic';
+
     // Réduit la police si le nom est trop long pour tenir dans l'étiquette.
-    let fontSize = 74;
+    let fontSize = showRarity ? 62 : 74;
     ctx.font = fontStyle(700, fontSize);
     const maxWidth = CANVAS_WIDTH - 44;
     const measured = ctx.measureText(text).width;
@@ -40,11 +47,27 @@ export class PetLabel {
       ctx.font = fontStyle(700, fontSize);
     }
 
-    drawOutlinedText(ctx, text, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 2, {
+    drawOutlinedText(ctx, text, CANVAS_WIDTH / 2, showRarity ? CANVAS_HEIGHT / 2 - 26 : CANVAS_HEIGHT / 2 + 2, {
       fill: '#ffffff',
       stroke: '#1d2140',
       lineWidth: 16,
     });
+
+    // Étiquette de rareté : chip coloré avec le nom de la rareté.
+    if (showRarity) {
+      const chipText = rarityDef.short ?? rarityDef.label;
+      ctx.font = fontStyle(700, 40);
+      const chipW = Math.min(CANVAS_WIDTH - 44, Math.max(160, ctx.measureText(chipText).width + 56));
+      const chipH = 56;
+      roundRectPath(ctx, (CANVAS_WIDTH - chipW) / 2, CANVAS_HEIGHT / 2 + 44, chipW, chipH, 28);
+      ctx.fillStyle = rarityDef.color;
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.stroke();
+      ctx.fillStyle = '#1d2140';
+      ctx.fillText(chipText, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 44 + chipH / 2);
+    }
 
     this.#texture = new THREE.CanvasTexture(canvas);
     this.#texture.colorSpace = THREE.SRGBColorSpace;

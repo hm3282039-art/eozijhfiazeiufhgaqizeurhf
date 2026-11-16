@@ -6,6 +6,7 @@ import { goldMaterial } from '../graphics/materials.js';
 import { SparkleCloud } from '../graphics/SparkleCloud.js';
 import { createCrown } from './procedural/parts/crown.js';
 import { PET_VARIANTS_VISUAL } from '../config/variantConfig.js';
+import { getRarity } from '../config/rarityConfig.js';
 
 /**
  * Chargement des modèles Blender (.glb / .gltf) pour les pets.
@@ -36,12 +37,13 @@ function pickClip(animations) {
  * recentré, posé au sol, mis à l'échelle, ombres activées, animation éventuelle lancée.
  *
  * @param {string} url ex : 'assets/models/cat.glb'
- * @param {{ rotationY?: number, targetSize?: number, variant?: string }} [options]
+ * @param {{ rotationY?: number, targetSize?: number, variant?: string, rarity?: string }} [options]
  *   `rotationY` : à ajuster si le modèle ne regarde pas vers +Z une fois exporté
- *   `variant`   : 'normal' | 'golden' | 'rainbow' | 'huge' (voir `config/variantConfig.js`)
+ *   `variant`   : 'normal' | 'golden' | 'rainbow' | 'shiny' (voir `config/variantConfig.js`)
+ *   `rarity`    : une rareté PS99 (voir `config/rarityConfig.js`)
  * @returns {Promise<import('./Pet.js').PetVisual>} rejette si le fichier est introuvable ou invalide
  */
-export async function loadPetModel(url, { rotationY = 0, targetSize = GAME_CONFIG.pets.modelTargetSize, variant = 'normal' } = {}) {
+export async function loadPetModel(url, { rotationY = 0, targetSize = GAME_CONFIG.pets.modelTargetSize, variant = 'normal', rarity = 'basic' } = {}) {
   const gltf = await loadGltf(url);
   const model = cloneWithSkeleton(gltf.scene);
 
@@ -68,11 +70,12 @@ export async function loadPetModel(url, { rotationY = 0, targetSize = GAME_CONFI
   root.add(model);
   root.scale.setScalar(scale);
 
-  // ── Variantes ──────────────────────────────────────────────────────────────
+  // ── Variantes + Rareté ───────────────────────────────────────────────────
   const isGolden = variant === 'golden';
   const isRainbow = variant === 'rainbow';
-  const isHuge = variant === 'huge';
+  const rarityDef = getRarity(rarity);
   let sparkles = null;
+  let aura = null;
   /** @type {{ material: THREE.Material, hue: number, saturation: number, lightness: number }[]} */
   const rainbowMaterials = [];
 
@@ -102,12 +105,26 @@ export async function loadPetModel(url, { rotationY = 0, targetSize = GAME_CONFI
     });
   }
 
-  if (isHuge) {
+  // Aura de rareté (étincelles orbitales).
+  if (rarityDef.aura) {
+    aura = new SparkleCloud({
+      count: rarityDef.stellaire ? 22 : 14,
+      radius: rarityDef.special ? 1.6 : 1.05,
+      height: rarityDef.special ? 3.2 : 2.2,
+      size: rarityDef.special ? 0.26 : 0.18,
+      colors: [rarityDef.color, rarityDef.glow, '#ffffff'],
+    });
+    aura.object3D.position.y = 0.1;
+    root.add(aura.object3D);
+  }
+
+  // Raretés spéciales : couronne + taille.
+  if (rarityDef.special) {
     const crown = createCrown().object3D;
-    crown.position.y = size.y; // sommet du modèle normalisé (avant le ×2,5)
-    crown.scale.setScalar(1.4);
+    crown.position.y = size.y; // sommet du modèle normalisé
+    crown.scale.setScalar(1.25);
     root.add(crown);
-    root.scale.multiplyScalar(PET_VARIANTS_VISUAL.huge.scale);
+    root.scale.multiplyScalar(rarityDef.scale);
   }
 
   // Animation embarquée dans le fichier (optionnelle).
@@ -118,10 +135,11 @@ export async function loadPetModel(url, { rotationY = 0, targetSize = GAME_CONFI
   return {
     kind: 'model',
     object3D: root,
-    height: size.y * scale * (isHuge ? PET_VARIANTS_VISUAL.huge.scale : 1),
+    height: size.y * scale * (rarityDef.special ? rarityDef.scale : 1),
     update: ({ dt }) => mixer?.update(dt),
     updateVariant(dt, time) {
       if (sparkles) sparkles.update(dt, time);
+      if (aura) aura.update(dt, time);
       if (isRainbow) {
         const hue = (time * 0.22) % 1;
         for (const entry of rainbowMaterials) {
@@ -133,6 +151,7 @@ export async function loadPetModel(url, { rotationY = 0, targetSize = GAME_CONFI
       mixer?.stopAllAction();
       for (const entry of rainbowMaterials) entry.material.dispose();
       sparkles?.dispose();
+      aura?.dispose();
       // Les géométries et matériaux d'origine appartiennent au fichier en cache : on ne les libère pas.
     },
   };

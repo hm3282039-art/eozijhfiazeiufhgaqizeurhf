@@ -29,6 +29,7 @@ export class HUD {
   #zoneBanner;
   #panels;
   #adminPanel = null;
+  #actions;
 
   /**
    * @param {{
@@ -62,8 +63,14 @@ export class HUD {
    * }} dependencies
    */
   constructor({ root, events, wallet, pets, shop, breakables, floatingText, actions }) {
+    this.#actions = actions;
     const petsPanel = new PetsPanel();
-    const shopPanel = new ShopPanel({ shop, onBuy: (egg) => this.#buyEgg(shop, egg) });
+    const shopPanel = new ShopPanel({
+      shop,
+      onBuy: (egg) => this.#buyEgg(shop, egg),
+      onActivate: (gamepass) => this.#activateGamepass(gamepass),
+      hasGamepass: (id) => actions.hasGamepass?.(id) ?? false,
+    });
     const teleportPanel = new TeleportPanel({ zones: ZONES, onTeleport: actions.teleportTo });
     this.#panels = [petsPanel, shopPanel, teleportPanel];
 
@@ -177,6 +184,12 @@ export class HUD {
     } else if (result.reason === 'not-enough') {
       const label = CURRENCIES[result.currency].shortLabel;
       this.#toasts.show(`Il te manque ${formatNumber(result.missing)} ${label}.`, { variant: 'warning', icon: '💸' });
+    }
+  }
+
+  #activateGamepass(gamepass) {
+    if (this.#actions.activateGamepass?.(gamepass.id)) {
+      this.#toasts.show(`${gamepass.emoji} ${gamepass.name} activé !`, { variant: 'success', icon: gamepass.emoji });
     }
   }
 }

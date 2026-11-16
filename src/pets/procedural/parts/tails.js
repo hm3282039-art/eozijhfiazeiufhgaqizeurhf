@@ -109,3 +109,74 @@ export function createDragonTail(palette) {
 
   return { object3D: root };
 }
+
+/**
+ * Queue de lapin : petit pompon rond et doux, posé sur le derrière.
+ * @returns {{ object3D: THREE.Group }}
+ */
+export function createBunnyTail(palette) {
+  const root = pivot('Tail', 0, 0.42, -BODY_HALF_DEPTH + 0.05);
+  const pompon = partMesh(sphereGeometry(1, 18, 14), glossyMaterial(palette.secondary), 'TailPompon');
+  pompon.scale.setScalar(0.2);
+  pompon.position.y = 0.18;
+  root.add(pompon);
+  return { object3D: root };
+}
+
+/**
+ * Queue de renard : longue et touffue, blanche à l'extrémité, qui pend et balance.
+ * @returns {{ object3D: THREE.Group, wag: THREE.Group }} `wag` : pivot à faire osciller
+ */
+export function createFoxTail(palette) {
+  const tube = getTailTube(
+    'fox',
+    [
+      [0, 0.05, 0.1],
+      [0, 0, -0.3],
+      [0, -0.12, -0.55],
+      [0, -0.3, -0.72],
+    ],
+    { radiusStart: 0.14, radiusEnd: 0.11, tubularSegments: 22, radialSegments: 12 },
+  );
+
+  const root = pivot('Tail', 0, 0.5, -BODY_HALF_DEPTH + 0.06);
+  root.rotation.x = -0.5;
+
+  const wag = pivot('TailWag');
+  root.add(wag);
+  wag.add(partMesh(tube.geometry, glossyMaterial(palette.body), 'TailTube'));
+
+  const tip = partMesh(sphereGeometry(1, 16, 12), glossyMaterial(palette.secondary), 'TailTip');
+  tip.scale.setScalar(0.15);
+  tip.position.copy(tube.end);
+  wag.add(tip);
+
+  return { object3D: root, wag };
+}
+
+/**
+ * Queue d'axolotl : nageoire arrière douce, qui ondule doucement.
+ * @returns {{ object3D: THREE.Group }}
+ */
+export function createAxolotlTail(palette) {
+  const tube = getTailTube(
+    'axolotl',
+    [
+      [0, 0.02, 0.08],
+      [0, -0.06, -0.2],
+      [0, -0.2, -0.4],
+      [0, -0.32, -0.55],
+    ],
+    { radiusStart: 0.13, radiusEnd: 0.18, tubularSegments: 20, radialSegments: 12 },
+  );
+
+  const root = pivot('Tail', 0, 0.4, -BODY_HALF_DEPTH + 0.05);
+  const fin = partMesh(
+    tube.geometry,
+    glossyMaterial(palette.accent, { roughness: 0.5, transparent: true, opacity: 0.92 }),
+    'TailFin',
+  );
+  fin.castShadow = false;
+  root.add(fin);
+  return { object3D: root };
+}

@@ -26,3 +26,25 @@ export function createRenderer(canvas) {
 
   return renderer;
 }
+
+/**
+ * Applique un préréglage de qualité au renderer (ombres + pixel ratio).
+ *
+ * Le mode « Performance FPS Max » utilise une ombre de moindre résolution et une
+ * plage d'ombre réduite ; le mode « Qualité Ultra » maximise les deux. Le facteur
+ * de particules est laissé au jeu (il modifie le nombre de particules actives).
+ *
+ * @param {THREE.WebGLRenderer} renderer
+ * @param {{ shadowMapSize: number, shadowRange: number, shadows: boolean }} quality
+ */
+export function applyQuality(renderer, quality) {
+  renderer.shadowMap.enabled = quality.shadows;
+  if (quality.shadows) {
+    renderer.shadowMap.needsUpdate = true;
+  }
+  // La taille de la texture d'ombre : on change la taille réelle du renderer,
+  // puis on laisse le monde (ombres) se reconfigurer au prochain frame.
+  renderer.shadowMap.autoUpdate = true;
+  // Stocke les préréglages pour que le monde puisse y accéder.
+  renderer.userData.quality = quality;
+}

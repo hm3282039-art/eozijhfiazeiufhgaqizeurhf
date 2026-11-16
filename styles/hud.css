@@ -47,12 +47,13 @@
   right: var(--edge);
 }
 
-/* En bas : barre d'actions */
+/* En bas : barre d'actions (toujours au-dessus des modales pour pouvoir changer de panneau) */
 .hud > .action-bar {
   position: absolute;
   bottom: calc(var(--edge) + 0.5rem);
   left: 50%;
   transform: translateX(-50%);
+  z-index: 25;
 }
 
 /* Calque flottant : barres de vie des coffres + chiffres de dégâts */

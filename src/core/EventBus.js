@@ -32,8 +32,18 @@ export const EVENTS = Object.freeze({
   WALLET_CHANGED: 'wallet:changed',
   PETS_CHANGED: 'pets:changed',
   PET_ANIMATION_CHANGED: 'pets:animation-changed',
+  /** Un pet a été équipé / déséquipé (inventaire). */
+  PET_EQUIP_CHANGED: 'pets:equip-changed',
   PLAYER_TELEPORTED: 'player:teleported',
   GATE_BLOCKED: 'gate:blocked',
   ZONE_UNLOCKED: 'zone:unlocked',
+  /** Un œuf a été acheté / éclos. */
+  EGG_HATCHED: 'egg:hatched',
+  /** La qualité graphique a changé. */
+  QUALITY_CHANGED: 'quality:changed',
+  /** Le plein écran a changé. */
+  FULLSCREEN_CHANGED: 'fullscreen:changed',
+  /** Le hoverboard a été activé / désactivé. */
+  HOVERBOARD_CHANGED: 'hoverboard:changed',
   TOAST: 'ui:toast',
 });

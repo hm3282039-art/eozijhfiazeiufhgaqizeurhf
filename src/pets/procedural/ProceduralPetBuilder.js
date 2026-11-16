@@ -7,6 +7,7 @@ import { createPaws } from './parts/paws.js';
 import { createCrown } from './parts/crown.js';
 import { BODY, BODY_CENTER_Y, BODY_TOP_Y } from './petAnatomy.js';
 import { SPECIES_BUILDERS } from './species/index.js';
+import { getRarity } from '../../config/rarityConfig.js';
 import { PET_VARIANTS_VISUAL } from '../../config/variantConfig.js';
 
 /** Indice du groupe de matériaux « face avant (+Z) » d'une RoundedBoxGeometry. */
@@ -29,36 +30,60 @@ function getBodyGeometry() {
   return bodyGeometry;
 }
 
+/** Mélange une couleur de palette vers la couleur de rareté (dominance rarity). */
+function tintTowardRarity(palette, rarity) {
+  const base = new THREE.Color(palette.body);
+  const target = new THREE.Color(rarity.color);
+  const mixed = base.clone().lerp(target, 0.7);
+  return { ...palette, body: `#${mixed.getHexString()}` };
+}
+
 /**
  * Générateur procédural « style Blender » : construit un pet complet sans aucun fichier 3D.
  *
- *  1. corps        RoundedBoxGeometry(1.2, 1.1, 1.2, 6, 0.28) en matériau « Toy Glossy »
- *  2. visage       texture <canvas> kawaii appliquée UNIQUEMENT sur la face avant
- *  3. accessoires  pattes arrondies + queue + éléments propres à l'espèce (oreilles, cornes, ailes…)
+ *  1. corps        RoundedBoxGeometry en matériau « Toy Glossy » (rareté teinte)
+ *  2. visage       texture <canvas> kawaii appliquée sur la face avant
+ *  3. accessoires  pattes arrondies + éléments propres à l'espèce
  *
- * Variantes (`variant`) :
- *   golden  : tout en or brillant + étincelles jaunes
- *   rainbow : les couleurs cyclent sur le spectre arc-en-ciel (visage redessiné au fil des teintes)
- *   huge    : 2,5× plus gros avec une couronne dorée
+ * Raretés (`rarity`) : teinte de la couleur vers la rareté, éclat (emissive) pour les
+ * raretés lumineuses, aura d'étincelles pour les raretés stellaires / spéciales,
+ * et taille (scale) pour HUGE / TITANIC / GARGANTUAN.
  *
- * @param {{ builder: string, palette: import('./species/index.js').PetPalette, variant?: string }} options
+ * Variantes (`variant`) : golden (or), rainbow (arc-en-ciel), shiny (éclat métallique).
+ *
+ * @param {{ builder: string, palette: import('./species/index.js').PetPalette, variant?: string, rarity?: string }} options
  * @returns {import('../Pet.js').PetVisual}
  */
-export function buildProceduralPet({ builder, palette, variant = 'normal' }) {
+export function buildProceduralPet({ builder, palette, variant = 'normal', rarity = 'basic' }) {
   const species = SPECIES_BUILDERS[builder];
   if (!species) throw new Error(`Espèce procédurale inconnue : « ${builder} »`);
 
+  const variantDef = PET_VARIANTS_VISUAL[variant] ?? PET_VARIANTS_VISUAL.normal;
+  const rarityDef = getRarity(rarity);
   const isGolden = variant === 'golden';
   const isRainbow = variant === 'rainbow';
-  const isHuge = variant === 'huge';
-  const effectivePalette = isGolden ? GOLD_PALETTE : palette;
+  const isShiny = variant === 'shiny';
+  const isSpecial = !!rarityDef.special;
+
+  // Palette effective : or pour golden, sinon teinte vers la rareté.
+  const effectivePalette = isGolden ? GOLD_PALETTE : tintTowardRarity(palette, rarityDef);
 
   const root = new THREE.Group();
-  root.name = `ProceduralPet(${builder}${variant !== 'normal' ? `, ${variant}` : ''})`;
+  root.name = `ProceduralPet(${builder}${variant !== 'normal' ? `, ${variant}` : ''}${rarity !== 'basic' ? `, ${rarity}` : ''})`;
 
   // ── 1 & 2. Corps + visage ────────────────────────────────────────────────
   const faceTextures = createFaceTextures(builder, species.face, effectivePalette);
-  const skinMaterial = isGolden ? goldMaterial() : glossyMaterial(effectivePalette.body);
+  // Matériau « peau » : or (golden), shiny (éclat métallique), ou glossy teinté rareté.
+  const skinMaterial = isGolden
+    ? goldMaterial()
+    : glossyMaterial(effectivePalette.body, {
+        roughness: isShiny ? 0.12 : 0.25,
+        metalness: isShiny ? 0.55 : 0.1,
+        // Éclat des raretés lumineuses.
+        ...(rarityDef.emissive
+          ? { emissive: rarityDef.glow, emissiveIntensity: rarityDef.neon ? 0.7 : 0.35 }
+          : {}),
+      });
   const faceMaterial = createToyMaterial({ map: faceTextures.open, roughness: 0.3, metalness: 0.05 });
 
   const materials = new Array(6).fill(skinMaterial);
@@ -77,11 +102,12 @@ export function buildProceduralPet({ builder, palette, variant = 'normal' }) {
   const parts = species.buildParts(effectivePalette);
   root.add(...parts.objects);
 
-  // ── Variantes ────────────────────────────────────────────────────────────
+  // ── Variantes : traitement des matériaux ───────────────────────────────────
   let sparkles = null;
   /** @type {{ material: THREE.Material, hue: number, saturation: number, lightness: number }[]} */
   const rainbowMaterials = [];
   let rainbowFace = null;
+  let aura = null;
 
   // Traitement des matériaux d'un mesh : le corps est un mesh à matériaux multiples
   // (5 groupes « peau » + 1 groupe « visage »). On conserve toujours le visage
@@ -94,6 +120,13 @@ export function buildProceduralPet({ builder, palette, variant = 'normal' }) {
     const next = mats.map((m) => {
       if (m === faceMaterial) return m; // le visage garde sa texture
       if (mode === 'golden') return goldMaterial();
+      if (mode === 'shiny') {
+        // Éclat métallique : on clone pour ne pas toucher les matériaux partagés.
+        const clone = m.clone();
+        clone.metalness = 0.6;
+        clone.roughness = 0.14;
+        return clone;
+      }
       if (mode === 'rainbow') {
         const clone = m.clone(); // matériau unique (les partagés ne doivent pas changer)
         const hsl = {};
@@ -107,25 +140,43 @@ export function buildProceduralPet({ builder, palette, variant = 'normal' }) {
   };
 
   if (isGolden) {
-    // Tout passe en or brillant (le visage garde sa texture, dessinée aux couleurs dorées).
     root.traverse((node) => applyMaterials(node, 'golden'));
     sparkles = new SparkleCloud({ count: 16, radius: 0.85, height: 2.4, size: 0.2, colors: ['#ffd94d', '#fff3b0', '#ffb81f'] });
     sparkles.object3D.position.y = 0.2;
     root.add(sparkles.object3D);
   }
 
+  if (isShiny) {
+    root.traverse((node) => applyMaterials(node, 'shiny'));
+  }
+
   if (isRainbow) {
-    // Matériaux clonés (les matériaux partagés ne doivent pas changer de couleur pour les autres pets).
     root.traverse((node) => applyMaterials(node, 'rainbow'));
     rainbowFace = { open: faceTextures.open, closed: faceTextures.closed, lastPaint: -1, lastHue: -1 };
   }
 
-  if (isHuge) {
-    root.add(createCrown().object3D);
-    root.scale.setScalar(PET_VARIANTS_VISUAL.huge.scale);
+  // ── Rareté : aura + couronne (spéciales) + taille ──────────────────────────
+  if (rarityDef.aura) {
+    aura = new SparkleCloud({
+      count: rarityDef.stellaire ? 22 : 14,
+      radius: rarityDef.special ? 1.6 : 1.05,
+      height: rarityDef.special ? 3.2 : 2.2,
+      size: rarityDef.special ? 0.26 : 0.18,
+      colors: [rarityDef.color, rarityDef.glow, '#ffffff'],
+    });
+    aura.object3D.position.y = 0.1;
+    root.add(aura.object3D);
   }
 
-  // Hauteur totale (oreilles, cornes et couronne comprises) : sert à placer l'étiquette.
+  if (isSpecial) {
+    const crown = createCrown().object3D;
+    crown.position.y = BODY_TOP_Y + 0.02;
+    crown.scale.setScalar(isSpecial ? 1.15 : 1);
+    root.add(crown);
+    root.scale.setScalar(rarityDef.scale);
+  }
+
+  // Hauteur totale (oreilles, cornes, couronne, aura comprises) : sert à placer l'étiquette.
   const height = new THREE.Box3().setFromObject(root).max.y;
 
   const applyRainbow = (hue, time) => {
@@ -158,13 +209,13 @@ export function buildProceduralPet({ builder, palette, variant = 'normal' }) {
     update: (pose) => parts.animate(pose),
     updateVariant(dt, time) {
       if (sparkles) sparkles.update(dt, time);
+      if (aura) aura.update(dt, time);
       if (isRainbow) applyRainbow((time * 0.22) % 1, time);
     },
     setEyesClosed(closed) {
       faceMaterial.map = closed ? (rainbowFace?.closed ?? faceTextures.closed) : (rainbowFace?.open ?? faceTextures.open);
     },
     dispose() {
-      // Géométries, textures et matériaux de couleur sont partagés : seul le matériau du visage est propre au pet.
       faceMaterial.dispose();
       if (rainbowFace) {
         rainbowFace.open.dispose();
@@ -172,6 +223,7 @@ export function buildProceduralPet({ builder, palette, variant = 'normal' }) {
       }
       for (const entry of rainbowMaterials) entry.material.dispose();
       sparkles?.dispose();
+      aura?.dispose();
     },
   };
 }

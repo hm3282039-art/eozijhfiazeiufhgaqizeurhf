@@ -1,6 +1,13 @@
 import { catSpecies } from './cat.js';
 import { dogSpecies } from './dog.js';
+import { bunnySpecies } from './bunny.js';
 import { dragonSpecies } from './dragon.js';
+import { bearSpecies } from './bear.js';
+import { pandaSpecies } from './panda.js';
+import { foxSpecies } from './fox.js';
+import { axolotlSpecies } from './axolotl.js';
+import { sharkSpecies } from './shark.js';
+import { griffinSpecies } from './griffin.js';
 
 /**
  * @typedef {{ body: string, secondary: string, accent: string, cheek: string, ink: string }} PetPalette
@@ -25,7 +32,7 @@ import { dragonSpecies } from './dragon.js';
  */
 
 /**
- * Registre des espèces procédurales.
+ * Registre des espèces procédurales (anatomiquement distinctes).
  * Pour ajouter une espèce : créer `species/<nom>.js` (+ son visage dans `faces/`),
  * l'enregistrer ici, puis la déclarer dans `config/petSpecies.js`.
  *
@@ -34,5 +41,12 @@ import { dragonSpecies } from './dragon.js';
 export const SPECIES_BUILDERS = Object.freeze({
   cat: catSpecies,
   dog: dogSpecies,
+  bunny: bunnySpecies,
   dragon: dragonSpecies,
+  bear: bearSpecies,
+  panda: pandaSpecies,
+  fox: foxSpecies,
+  axolotl: axolotlSpecies,
+  shark: sharkSpecies,
+  griffin: griffinSpecies,
 });

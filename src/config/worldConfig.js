@@ -1,12 +1,14 @@
 /**
- * Plan de la Zone 1 (Hub de départ).
+ * Plan des ZONES du jeu (structuré, objets propres).
  *
- * Repère : Y vers le haut, l'île est centrée sur X = 0.
- * Le spawn est au SUD (+Z) et la porte de la Zone 2 au NORD (−Z).
+ * Repère : Y vers le haut, les îles sont alignées sur l'axe nord–sud (−Z = nord).
+ *   Zone 1 (Spawn)        → île centrale, sud
+ *   Zone 2 (Forêt Sakura) → île au nord, déblocable à 1 000 pièces
+ *   Zone 3 (Mines Cristal) → île au nord de la Zone 2, déblocable à 10 000 pièces
  */
 export const WORLD = Object.freeze({
   island: {
-    /** Limites de la pelouse. */
+    /** Limites de la pelouse de la Zone 1. */
     minX: -30,
     maxX: 30,
     minZ: -42,
@@ -24,6 +26,7 @@ export const WORLD = Object.freeze({
 
   path: { halfWidth: 3.1, startZ: 13.4, endZ: -42 },
 
+  /** Porte Zone 1 → Zone 2 (au nord de la Zone 1). */
   gate: {
     x: 0,
     z: -40.4,
@@ -35,7 +38,26 @@ export const WORLD = Object.freeze({
     label: 'ZONE 2',
   },
 
-  eggPedestal: { x: -17.5, z: 3.5, radius: 3.5 },
+  /** Porte Zone 2 → Zone 3 (au nord de la Zone 2). */
+  gate2: {
+    x: 0,
+    z: -94.6,
+    halfOpening: 3.6,
+    pillarSize: 2.2,
+    height: 7.4,
+    price: 10000,
+    label: 'ZONE 3',
+  },
+
+  /** Les 3 piédestaux des œufs d'éclosion, autour de la fontaine (Zone 1). */
+  eggPedestals: [
+    { x: -13, z: 30 },
+    { x: 0, z: 31 },
+    { x: 13, z: 30 },
+  ],
+
+  /** Piédestal décoratif (œuf géant) au centre de la place. */
+  eggPedestal: { x: 0, z: 22, radius: 3.5 },
 
   /**
    * Point d'arrivée du joueur, légèrement décalé par rapport à l'axe de l'île pour que
@@ -46,19 +68,24 @@ export const WORLD = Object.freeze({
    */
   spawn: { x: -1.8, z: 29.4, yaw: 0.2, formationYaw: 0.2 + Math.PI },
 
-  /**
-   * Zone 2 : une seconde île au nord, reliée à la Zone 1 par la porte.
-   * Sa dalle (z jusqu'à −40) passe SOUS la pelouse de la Zone 1 : aucune couture visible,
-   * et la bordure de pierres de la Zone 1 (avec son ouverture à la porte) reste en place.
-   */
+  /** Zone 2 : île au nord, reliée à la Zone 1 par la porte. */
   zone2: {
     island: { minX: -30, maxX: 30, minZ: -96, maxZ: -40 },
     /** Point d'arrivée de la téléportation (juste derrière la porte, face au nord). */
     entrance: { x: 0, z: -48, yaw: Math.PI, formationYaw: 0 },
-    /** Socle du Coffre Boss Géant, au fond de la Zone 2. */
-    bossChest: { x: 0, z: -88 },
-    /** Ligne de séparation entre les deux zones (pour le bandeau de zone). */
+    /** Ligne de séparation entre les zones (pour le bandeau de zone). */
     boundaryZ: -42,
+    /** Socle décoratif du Coffre Boss (le boss n'est pas spawné en début de jeu). */
+    bossChest: { x: 0, z: -88 },
+  },
+
+  /** Zone 3 : « Mines de Cristal & Or », au nord de la Zone 2. */
+  zone3: {
+    island: { minX: -34, maxX: 34, minZ: -152, maxZ: -96 },
+    /** Point d'arrivée de la téléportation. */
+    entrance: { x: 0, z: -104, yaw: Math.PI, formationYaw: 0 },
+    /** Ligne de séparation Zone 2 / Zone 3. */
+    boundaryZ: -96,
   },
 });
 
@@ -66,10 +93,11 @@ export const WORLD = Object.freeze({
 export function getWalkableBounds(margin = 0) {
   const { minX, maxX, minZ, maxZ, borderThickness } = WORLD.island;
   const zone2 = WORLD.zone2.island;
+  const zone3 = WORLD.zone3.island;
   return {
-    minX: Math.min(minX, zone2.minX) + borderThickness + margin,
-    maxX: Math.max(maxX, zone2.maxX) - borderThickness - margin,
-    minZ: Math.min(minZ, zone2.minZ) + borderThickness + margin,
-    maxZ: Math.max(maxZ, zone2.maxZ) - borderThickness - margin,
+    minX: Math.min(minX, zone2.minX, zone3.minX) + borderThickness + margin,
+    maxX: Math.max(maxX, zone2.maxX, zone3.maxX) - borderThickness - margin,
+    minZ: Math.min(minZ, zone2.minZ, zone3.minZ) + borderThickness + margin,
+    maxZ: Math.max(maxZ, zone2.maxZ, zone3.maxZ) - borderThickness - margin,
   };
 }

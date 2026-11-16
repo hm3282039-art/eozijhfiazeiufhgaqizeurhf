@@ -11,6 +11,42 @@ export const GAME_CONFIG = Object.freeze({
     shadowRange: 34,
   },
 
+  /** Sélecteur de qualité (Admin Panel / Paramètres). Réglage des ombres et particules à la volée. */
+  quality: {
+    /** Mode « Performance FPS Max » : ombres réduites, peu de particules. */
+    performance: {
+      name: 'Performance FPS Max',
+      shadowMapSize: 1024,
+      shadowRange: 26,
+      particles: 0.4,
+      shadows: true,
+    },
+    /** Mode « Qualité Ultra » : ombres haute résolution + particules complètes. */
+    ultra: {
+      name: 'Qualité Ultra',
+      shadowMapSize: 2048,
+      shadowRange: 34,
+      particles: 1,
+      shadows: true,
+    },
+  },
+  /** Qualité par défaut au lancement. */
+  defaultQuality: 'ultra',
+
+  /** Plein écran : activation via `document.documentElement.requestFullscreen()`. */
+  fullscreen: { enabled: true },
+
+  /** Œufs : distance de proximité pour afficher la bulle d'interaction. */
+  egg: { proximityDistance: 4 },
+
+  /** Hoverboard : planche volante (touche H). */
+  hoverboard: {
+    speedMultiplier: 1.8,
+    floatHeight: 0.5,
+    /** Largeur/longueur/hauteur de la planche. */
+    size: { width: 0.7, length: 2.4, thickness: 0.12 },
+  },
+
   camera: {
     fov: 55,
     /** En dessous de ce rapport largeur / hauteur, le champ vertical s'élargit (fenêtre étroite). */

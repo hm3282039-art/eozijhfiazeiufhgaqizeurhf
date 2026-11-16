@@ -88,6 +88,27 @@ export class Lighting {
   }
 
   /**
+   * Applique un préréglage de qualité à l'éclairage (ombres + résolution d'ombre).
+   * Rappelle cette méthode au changement de qualité pour que l'ombre suive.
+   * @param {{ shadowMapSize: number, shadowRange: number, shadows: boolean }} quality
+   */
+  setQuality(quality) {
+    this.sun.castShadow = quality.shadows;
+    this.sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
+    const shadowCamera = this.sun.shadow.camera;
+    shadowCamera.left = -quality.shadowRange;
+    shadowCamera.right = quality.shadowRange;
+    shadowCamera.top = quality.shadowRange;
+    shadowCamera.bottom = -quality.shadowRange;
+    shadowCamera.updateProjectionMatrix();
+    // Récalcule la taille du texel pour que l'ombre reste « stable » au mouvement.
+    this.#texelSize = (quality.shadowRange * 2) / quality.shadowMapSize;
+    this.sun.shadow.map?.dispose?.();
+    this.sun.shadow.map = null;
+    this.sun.shadow.matrixWorldNeedsUpdate = true;
+  }
+
+  /**
    * @param {number} dt
    * @param {number} _time
    * @param {THREE.Vector3} focus position du joueur

@@ -28,6 +28,8 @@ export class PetManager {
   #target = null;
   #damageBoostEnabled = false;
   #sizeMultiplier = 1;
+  /** @type {number | null} surcharge de la taille d'équipe (Gamepass +15 Pets Équipés) */
+  #maxCountOverride = null;
 
   /**
    * Appelé à chaque coup porté par un pet : `(pet, breakable) => void`.
@@ -62,7 +64,13 @@ export class PetManager {
   }
 
   get maxCount() {
-    return GAME_CONFIG.pets.maxOwned;
+    // Surcharge possible via le Gamepass « +15 Pets Équipés ».
+    return this.#maxCountOverride ?? GAME_CONFIG.pets.maxOwned;
+  }
+
+  /** Ajoute des slots d'équipe (ex. Gamepass +15 Pets Équipés). @param {number} value */
+  setMaxCountDelta(value) {
+    this.#maxCountOverride = Math.max(GAME_CONFIG.pets.maxOwned, (this.#maxCountOverride ?? GAME_CONFIG.pets.maxOwned) + value);
   }
 
   get isFull() {
@@ -101,7 +109,8 @@ export class PetManager {
    *   name?: string,
    *   palette?: object,
    *   modelUrl?: string | null,   remplace le `modelUrl` de l'espèce (un .glb, ou `null` pour forcer le procédural)
-   *   variant?: string,           'normal' | 'golden' | 'rainbow' | 'huge'
+   *   variant?: string,           'normal' | 'golden' | 'rainbow' | 'shiny' (modificateur visuel + dégâts)
+   *   rarity?: string,           une rareté PS99 (voir `config/rarityConfig.js`), défaut « basic »
    *   isTest?: boolean,
    * }} config
    * @param {{ at?: { x: number, z: number }, animate?: boolean }} [options]
