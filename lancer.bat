@@ -4,11 +4,12 @@ title Pet World 3D
 
 echo.
 echo   Pet World 3D — lancement...
-echo   Ouverture du jeu : http://localhost:8000
+echo   Le jeu s'ouvrira automatiquement dans le navigateur...
 echo   (Pour arreter : fermez cette fenetre)
 echo.
 
-start "" "http://localhost:8000"
+REM Ouvre le navigateur ~2s apres le lancement (le serveur a le temps de se preparer).
+start "PetWorldNav" /min cmd /c "ping -n 3 127.0.0.1 >nul & start http://localhost:8000"
 
 REM 1) Node.js : serveur portable inclus (serveur.cjs), sans npm install.
 where node >nul 2>nul

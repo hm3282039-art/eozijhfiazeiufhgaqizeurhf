@@ -1,10 +1,12 @@
 #!/bin/bash
 echo ""
 echo "  Pet World 3D — lancement..."
-echo "  Ouverture du jeu : http://localhost:8000"
+echo "  Le jeu s'ouvrira automatiquement dans le navigateur..."
 echo "  (Pour arreter : fermez cette fenetre)"
 echo ""
-xdg-open "http://localhost:8000" 2>/dev/null || echo "  Ouvrez http://localhost:8000 dans votre navigateur"
+
+# Ouvre le navigateur ~2s apres le lancement (le serveur a le temps de se preparer).
+( sleep 2; xdg-open "http://localhost:8000" 2>/dev/null ) &
 
 python3 -m http.server 8000 2>/dev/null
 node serveur.cjs
