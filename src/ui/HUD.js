@@ -78,7 +78,12 @@ export class HUD {
       onActivate: (gamepass) => this.#activateGamepass(gamepass),
       hasGamepass: (id) => actions.hasGamepass?.(id) ?? false,
     });
-    const teleportPanel = new TeleportPanel({ zones: ZONES, onTeleport: actions.teleportTo });
+    const teleportPanel = new TeleportPanel({
+      zones: ZONES,
+      onTeleport: actions.teleportTo,
+      onUnlock: (zone) => this.#unlockZone(zone),
+      canUnlock: (zone) => actions.canUnlockZone?.(zone.id) ?? false,
+    });
     this.#panels = [petsPanel, shopPanel, teleportPanel];
 
     // Panneau Admin : recueille toutes les actions de test.
@@ -139,6 +144,7 @@ export class HUD {
     events.on(EVENTS.WALLET_CHANGED, ({ currency, balance }) => {
       this.#currencyBar.setValue(currency, balance);
       shopPanel.refresh();
+      teleportPanel.refresh();
     });
 
     events.on(EVENTS.PET_ANIMATION_CHANGED, (style) => helpBox.setAnimationName(style.label));
@@ -216,6 +222,19 @@ export class HUD {
   #activateGamepass(gamepass) {
     if (this.#actions.activateGamepass?.(gamepass.id)) {
       this.#toasts.show(`${gamepass.emoji} ${gamepass.name} activé !`, { variant: 'success', icon: gamepass.emoji });
+    }
+  }
+
+  /** Débloque une zone depuis le panneau Téléportation (paiement du prix). */
+  #unlockZone(zone) {
+    const ok = this.#actions.unlockZone?.(zone.id) ?? false;
+    if (ok) {
+      this.#toasts.show(`🎉 ${zone.emoji} ${zone.name} débloquée !`, { variant: 'success', icon: '🎉' });
+    } else {
+      this.#toasts.show(`Il te manque des ${CURRENCIES[zone.price.currency].shortLabel} !`, {
+        variant: 'warning',
+        icon: '🔒',
+      });
     }
   }
 }

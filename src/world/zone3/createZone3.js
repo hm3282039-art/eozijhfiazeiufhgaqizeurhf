@@ -201,6 +201,41 @@ function createStoneArch(x, z, span) {
   return group;
 }
 
+/** Arche de **cristal lumineux** géante (symbole des Mines de Cristal). */
+function createCrystalArch(x, z, span = 9, height = 8) {
+  const group = new THREE.Group();
+  const crystalMat = createToyMaterial({
+    color: '#7cf0ff',
+    roughness: 0.12,
+    metalness: 0.25,
+    transparent: true,
+    opacity: 0.82,
+  });
+  const glowMat = glowMaterial('#7cf0ff', { opacity: 0.55 });
+
+  const pillarGeo = new THREE.CylinderGeometry(0.55, 0.78, height, 14);
+  for (const side of [-1, 1]) {
+    const pillar = new THREE.Mesh(pillarGeo, crystalMat);
+    pillar.position.set(side * (span / 2), height / 2, 0);
+    pillar.castShadow = false;
+    group.add(pillar);
+  }
+
+  // Arche : demi-cercle de cristal (TorusGeometry, arc = PI) posé sur les piliers.
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(span / 2, 0.28, 12, 28, Math.PI), crystalMat);
+  arch.position.y = height;
+  arch.castShadow = false;
+  group.add(arch);
+
+  const archGlow = new THREE.Mesh(new THREE.TorusGeometry(span / 2, 0.45, 10, 22, Math.PI), glowMat);
+  archGlow.position.y = height;
+  group.add(archGlow);
+
+  group.position.set(x, 0, z);
+  group.name = 'CrystalArch';
+  return group;
+}
+
 /**
  * La Zone 3 : « Mines de Cristal & Or », île au nord de la Zone 2.
  * @returns {{ object3D: THREE.Group, colliders: object[], update: Function }}
@@ -233,18 +268,32 @@ export function createZone3() {
   const crystals = CRYSTALS.map(createCrystal);
   for (const crystal of crystals) group.add(crystal.object3D);
 
-  // Piliers d'or + arches.
+  // Piliers d'or + arches de pierre.
   for (const pillar of GOLD_PILLARS) group.add(createGoldPillar(pillar.x, pillar.z));
   group.add(createStoneArch(0, -120, 6));
   group.add(createStoneArch(-10, -136, 5));
   group.add(createStoneArch(10, -136, 5));
 
+  // Arche de cristal lumineux (symbole) + allée de cristaux menant à l'arche.
+  group.add(createCrystalArch(centerX, centerZ - 60));
+  const alleyUpdaters = [];
+  for (let i = 0; i < 6; i++) {
+    const t = i / 5;
+    const zPos = centerZ - 18 - t * 36;
+    for (const side of [-5, 5]) {
+      const def = { x: centerX + side, z: zPos, height: 2.2 + t * 2.2, color: i % 2 ? 'magenta' : 'cyan', scale: 0.65 };
+      const alley = createCrystal(def);
+      group.add(alley.object3D);
+      if (alley.update) alleyUpdaters.push(alley.update);
+    }
+  }
+
   // Rochers sombres (colliders).
   const rocks = createRocks(DARK_ROCKS);
   group.add(rocks.object3D);
 
-  // Fusion des mises à jour des cristaux.
-  const updaters = crystals.map((c) => c.update).filter(Boolean);
+  // Fusion des mises à jour des cristaux (géants + allée).
+  const updaters = [...crystals.map((c) => c.update), ...alleyUpdaters].filter(Boolean);
 
   return {
     object3D: group,

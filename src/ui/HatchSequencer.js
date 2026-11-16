@@ -10,7 +10,7 @@ import { createCanvas, fontStyle, drawOutlinedText } from '../graphics/canvas.js
 const PHASE = {
   darken: 0.4,
   shake: 2.2,
-  explode: 0.7,
+  explode: 0.85,
   reveal: 2.4,
 };
 
@@ -18,10 +18,12 @@ const PHASE = {
  * Séquenceur d'éclosion d'œuf : animation cinématique complète.
  *
  *  1. **darken**  : l'écran s'assombrit légèrement ;
- *  2. **shake**   : un œuf 3D apparaît devant la caméra, oscille/secoue de gauche à droite
- *                   en accélérant, avec des flashs lumineux ;
- *  3. **explode** : flash blanc + confettis (géré par `loot.explodeConfetti`);
- *  4. **reveal**  : le pet obtenu tourne devant l'écran avec un bandeau
+ *  2. **shake**   : un œuf 3D apparaît devant la caméra. Il s'illumine de l'intérieur
+ *                   (halo qui pulse + lumière interne), se fissure (éclats de coquille)
+ *                   et secoue de plus en plus fort ;
+ *  3. **explode** : **les deux coquilles s'ouvrent** (séparation + rotation), flash
+ *                   blanc + confettis ; le pet jaillit entre les coquilles ;
+ *  4. **reveal**  : le pet s'élève en tournoiement avec un halo, bandeau
  *                   Nom / Espèce / Rareté, puis est ajouté à l'inventaire.
  *
  * @param {{
@@ -44,8 +46,13 @@ export class HatchSequencer {
   #elapsed = 0;
   #roll = null;
   #eggGroup = null;
-  #petVisual = null;
+  #shellTop = null;
+  #shellBottom = null;
+  #halo = null;
   #flash = null;
+  #eggLight = null;
+  #petVisual = null;
+  #petHalo = null;
   #overlay = null;
   #banner = null;
   #confettiTimer = 0;
@@ -119,12 +126,13 @@ export class HatchSequencer {
     }
   }
 
-  // ── Phase 2 : œuf qui secoue et accélére ───────────────────────────────────
+  // ── Phase 2 : œuf qui s'illumine, se fissure et secoue ─────────────────────
   #updateShake(dt) {
     const t = this.#elapsed;
-    // Accélération progressive : amplitude et fréquence croissent.
     const progress = Math.min(1, t / PHASE.shake);
-    const amplitude = 0.15 + progress * 0.55;
+
+    // Accélération progressive : amplitude et fréquence croissent.
+    const amplitude = 0.12 + progress * 0.5;
     const freq = 6 + progress * 14;
     const shake = Math.sin(t * freq) * amplitude;
     const tilt = Math.cos(t * freq * 0.8) * amplitude * 0.4;
@@ -134,17 +142,28 @@ export class HatchSequencer {
       this.#eggGroup.rotation.z = tilt;
     }
 
-    // Flashs lumineux : plus intenses vers la fin.
-    const flashIntensity = Math.pow(progress, 2) * (0.6 + 0.4 * Math.abs(Math.sin(t * freq * 0.5)));
-    if (this.#flash) {
-      this.#flash.material.opacity = flashIntensity;
-      this.#flash.scale.setScalar(1 + flashIntensity * 0.5);
+    // Halo qui pulse : l'œuf s'illumine de l'intérieur vers la fin.
+    if (this.#halo) {
+      const glow = Math.pow(progress, 1.5);
+      this.#halo.scale.setScalar(1 + glow * 0.9);
+      this.#halo.material.opacity = 0.25 + glow * 0.55;
+    }
+    if (this.#eggLight) {
+      this.#eggLight.intensity = Math.pow(progress, 1.5) * 2.4;
     }
 
-    // Petites étincelles au gré des secousses.
-    if (Math.random() < progress * 0.5 && this.#loot?.explodeConfetti) {
+    // Flashs lumineux : plus intenses vers la fin.
+    const flashIntensity = Math.pow(progress, 2) * (0.5 + 0.5 * Math.abs(Math.sin(t * freq * 0.5)));
+    if (this.#flash) {
+      this.#flash.material.opacity = flashIntensity * 0.6;
+      this.#flash.scale.setScalar(1 + flashIntensity * 0.4);
+    }
+
+    // Éclats de coquille et étincelles au gré des secousses.
+    if (Math.random() < progress * 0.6 && this.#loot?.explodeConfetti) {
       const pos = this.#eggWorldPos();
-      this.#loot.explodeConfetti(pos, ['#ffffff', eggDef?.colors?.[1] ?? '#fff3b0', '#ffffff']);
+      const colors = [this.#roll.eggDef.colors[0], this.#roll.eggDef.colors[1], '#ffffff'];
+      this.#loot.explodeConfetti(pos, colors);
     }
 
     if (this.#elapsed >= PHASE.shake) {
@@ -153,12 +172,38 @@ export class HatchSequencer {
     }
   }
 
-  // ── Phase 3 : explosion blanche + confettis ───────────────────────────────
+  // ── Phase 3 : ouverture des coquilles + explosion ─────────────────────────
   #updateExplode(dt) {
-    if (this.#flash) {
-      this.#flash.material.opacity = Math.max(0, 1 - this.#elapsed / PHASE.explode);
-      this.#flash.scale.setScalar(2.5 - this.#elapsed / PHASE.explode);
+    const t = this.#elapsed;
+    const progress = Math.min(1, t / PHASE.explode);
+
+    // Les deux coquilles s'ouvrent : écart vertical + rotation.
+    if (this.#shellTop) {
+      this.#shellTop.position.y = progress * 1.6;
+      this.#shellTop.rotation.z = progress * 0.7;
+      this.#shellTop.rotation.y = progress * 0.8;
+      this.#shellTop.material.opacity = 1 - progress * 0.35;
     }
+    if (this.#shellBottom) {
+      this.#shellBottom.position.y = -progress * 1.4;
+      this.#shellBottom.rotation.z = -progress * 0.6;
+      this.#shellBottom.rotation.y = -progress * 0.8;
+      this.#shellBottom.material.opacity = 1 - progress * 0.35;
+    }
+    if (this.#halo) {
+      this.#halo.material.opacity = Math.max(0, 0.9 - progress * 0.9);
+      this.#halo.scale.setScalar(1.4 + progress * 1.2);
+    }
+    if (this.#eggLight) {
+      this.#eggLight.intensity = Math.max(0, 2.4 - progress * 2.4);
+    }
+
+    // Flash blanc qui décroît.
+    if (this.#flash) {
+      this.#flash.material.opacity = Math.max(0, 1 - progress);
+      this.#flash.scale.setScalar(2.5 - progress * 1.5);
+    }
+
     // Confettis jaillis.
     this.#confettiTimer -= dt;
     if (this.#confettiTimer <= 0 && this.#loot?.explodeConfetti) {
@@ -166,9 +211,6 @@ export class HatchSequencer {
       const pos = this.#eggWorldPos();
       this.#loot.explodeConfetti(pos, ['#ffffff', '#ffd94d', '#ff5a7a', '#7cb8ff', '#a45cff']);
     }
-
-    // Déplace l'œuf hors du champ et prépare le pet.
-    if (this.#eggGroup) this.#eggGroup.visible = false;
 
     if (this.#elapsed >= PHASE.explode) {
       this.#phase = 'reveal';
@@ -180,12 +222,17 @@ export class HatchSequencer {
   // ── Phase 4 : révélation du pet + bandeau ─────────────────────────────────
   #updateReveal(dt) {
     if (this.#petVisual) {
-      // Le pet tourne devant la caméra.
+      // Le pet tourne et s'élève devant la caméra.
       this.#petVisual.object3D.rotation.y += dt * 2.4;
+      const rise = Math.min(1, this.#elapsed / 0.6);
       const bob = Math.sin(this.#elapsed * 3) * 0.12;
-      this.#petVisual.object3D.position.y = 1.2 + bob;
+      this.#petVisual.object3D.position.y = 1.2 - 0.4 + rise * 0.4 + bob;
       this.#petVisual.update?.({ dt, time: this.#elapsed, move: 0, hop: 0 });
       this.#petVisual.updateVariant?.(dt, this.#elapsed);
+    }
+    if (this.#petHalo) {
+      const pulse = 1 + Math.sin(this.#elapsed * 4) * 0.08;
+      this.#petHalo.scale.setScalar(pulse);
     }
 
     if (this.#banner) {
@@ -214,16 +261,39 @@ export class HatchSequencer {
     document.body.appendChild(this.#overlay);
   }
 
+  /**
+   * Crée l'œuf en **deux coquilles** (supérieure / inférieure) qui s'ouvriront à
+   * l'explosion. Chaque coquille utilise une texture à dégradé d'opacité pour
+   * faire une « coupe » nette au milieu (l'œuf fermé = les deux superposées).
+   */
   #createEgg() {
     const group = new THREE.Group();
     group.name = 'HatchEgg';
 
-    const egg = new THREE.Mesh(
-      eggGeometry(1.0, 2.2),
-      createToyMaterial({ color: this.#roll.eggDef.colors[0], roughness: 0.3 }),
+    const color = this.#roll.eggDef.colors[0];
+    this.#shellTop = new THREE.Mesh(eggGeometry(1.0, 2.2), this.#shellMaterial(color, true));
+    this.#shellBottom = new THREE.Mesh(eggGeometry(1.0, 2.2), this.#shellMaterial(color, false));
+    this.#shellTop.castShadow = false;
+    this.#shellBottom.castShadow = false;
+    group.add(this.#shellTop);
+    group.add(this.#shellBottom);
+
+    // Halo lumineux autour de l'œuf (visible quand il s'illumine de l'intérieur).
+    this.#halo = new THREE.Mesh(
+      new THREE.SphereGeometry(1.5, 24, 18),
+      new THREE.MeshBasicMaterial({
+        color: '#fff3b0',
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
     );
-    egg.castShadow = false;
-    group.add(egg);
+    group.add(this.#halo);
+
+    // Lumière interne : l'œuf s'illumine avant l'ouverture.
+    this.#eggLight = new THREE.PointLight('#ffd966', 0, 9, 2);
+    group.add(this.#eggLight);
 
     // Flash blanc (plan ajouté au groupe pour l'éclairage).
     const flashGeometry = new THREE.PlaneGeometry(4, 4);
@@ -236,6 +306,37 @@ export class HatchSequencer {
 
     this.#eggGroup = group;
     this.#scene.add(group);
+  }
+
+  /**
+   * Matériau d'une coquille : texture canvas à dégradé vertical d'opacité.
+   * `isTop` vrai → opaque en haut, transparent en bas ; faux → l'inverse.
+   */
+  #shellMaterial(color, isTop) {
+    const { canvas, ctx } = createCanvas(128, 256);
+    const { r, g, b } = new THREE.Color(color);
+    const rgb = `${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)}`;
+    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+    if (isTop) {
+      gradient.addColorStop(0, `rgba(${rgb},1)`);
+      gradient.addColorStop(1, `rgba(${rgb},0)`);
+    } else {
+      gradient.addColorStop(0, `rgba(${rgb},0)`);
+      gradient.addColorStop(1, `rgba(${rgb},1)`);
+    }
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 128, 256);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      roughness: 0.3,
+      metalness: 0.05,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
   }
 
   #showEgg() {
@@ -271,6 +372,19 @@ export class HatchSequencer {
     cam.updateMatrixWorld();
     const offset = new THREE.Vector3(0, 1.2, -3.5).applyQuaternion(cam.quaternion);
     this.#petVisual.object3D.position.copy(cam.position).add(offset);
+
+    // Halo autour du pet révélé (légère aura dorée).
+    this.#petHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(0.9, 20, 14),
+      new THREE.MeshBasicMaterial({
+        color: '#ffe9a8',
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    this.#petVisual.object3D.add(this.#petHalo);
 
     // Crée le bandeau (DOM) Nom / Espèce / Rareté.
     this.#createBanner();
@@ -354,12 +468,18 @@ export class HatchSequencer {
       }
     });
     this.#eggGroup = null;
+    this.#shellTop = null;
+    this.#shellBottom = null;
+    this.#halo = null;
+    this.#flash = null;
+    this.#eggLight = null;
 
     if (this.#petVisual) {
       // Le pet réel est ajouté à l'équipe : on retire seulement la version tournoyante.
       this.#scene.remove(this.#petVisual.object3D);
       this.#petVisual.dispose();
       this.#petVisual = null;
+      this.#petHalo = null;
     }
 
     if (this.#banner) {
@@ -373,7 +493,6 @@ export class HatchSequencer {
       this.#overlay.remove();
       this.#overlay = null;
     }
-    this.#flash = null;
     this.#confettiTimer = 0;
   }
 }

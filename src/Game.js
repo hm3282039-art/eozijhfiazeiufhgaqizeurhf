@@ -164,6 +164,8 @@ export class Game {
           nukeMap: () => this.nukeMap(),
           unlockZone2: () => this.#unlockZone2(true),
           unlockZone3: () => this.#unlockZone3(true),
+          unlockZone: (zoneId) => this.unlockZone(zoneId),
+          canUnlockZone: (zoneId) => this.canUnlockZone(zoneId),
           setPlayerSpeed: (value) => this.player.speedMultiplier = value,
           setPetSize: (value) => this.pets.setSizeMultiplier(value),
           toggleMood: () => this.toggleMood(),
@@ -516,6 +518,24 @@ export class Game {
     this.hud.refreshZone3Unlocked?.();
     this.#toast('🎉 ZONE 3 DÉBLOQUÉE !', { variant: 'success', icon: '🎉', duration: 4200 });
     return true;
+  }
+
+  /**
+   * Débloque une zone depuis le panneau « Téléportation » (paiement du prix).
+   * @param {string} zoneId 'zone-2' ou 'zone-3'
+   * @returns {boolean} `true` si le déblocage a eu lieu
+   */
+  unlockZone(zoneId) {
+    if (zoneId === 'zone-3') return this.#unlockZone3(false);
+    if (zoneId === 'zone-2') return this.#unlockZone2(false);
+    return false;
+  }
+
+  /** Le joueur peut-il payer le déblocage de cette zone ? */
+  canUnlockZone(zoneId) {
+    const zone = ZONES.find((candidate) => candidate.id === zoneId);
+    if (!zone || zone.unlocked) return false;
+    return this.wallet.canAfford(zone.price.currency, zone.price.amount);
   }
 
   /** Petite explosion de fête + pluie de confettis dorés (déblocage d'une zone). */

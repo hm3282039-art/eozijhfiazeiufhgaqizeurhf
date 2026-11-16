@@ -16,10 +16,37 @@ const FRONT_FACE = 4;
 /** Toutes les géométries et textures sont créées une seule fois au démarrage et partagées. */
 const geometryCache = new Map();
 
+/**
+ * Géométrie du corps : **ellipsoïde lisse** (sphère étirée) — style PS99 doux,
+ * pas un cube. Le scaling par les demi-dimensions est appliqué sur le Mesh.
+ */
 function getBodyGeometry(body) {
   const key = `${body.width}x${body.height}x${body.depth}|${body.segments}|${body.radius}`;
   if (!geometryCache.has(key)) {
-    geometryCache.set(key, roundedBoxGeometry(body.width, body.height, body.depth, body.segments, body.radius));
+    geometryCache.set(key, new THREE.SphereGeometry(0.5, 36, 28));
+  }
+  return geometryCache.get(key);
+}
+
+/**
+ * Géométrie du visage : **calotte sphérique** (surface courbe) autour de l'avant
+ * (+Z) du corps — le visage épouse la surface du corps (style PS99).
+ */
+function getFaceGeometry(body) {
+  const key = `face|${body.width}x${body.height}x${body.depth}`;
+  if (!geometryCache.has(key)) {
+    // Calotte centrée sur l'avant (+Z) : theta = polaire (depuis +Y), phi = azimut.
+    // thetaStart/thetaLength définissent la hauteur de la calotte ; phiStart/phiLength
+    // la largeur (centrée sur +Z = phi 0 mod 2π). L'ouverture azimutale limitée
+    // évite d'étaler la texture du visage sur tout le tour.
+    const thetaStart = Math.PI / 2 - Math.PI * 0.42;
+    const thetaLength = Math.PI * 0.84;
+    const phiStart = Math.PI * 2 - Math.PI * 0.45;
+    const phiLength = Math.PI * 0.9;
+    geometryCache.set(
+      key,
+      new THREE.SphereGeometry(0.5, 36, 28, phiStart, phiLength, thetaStart, thetaLength),
+    );
   }
   return geometryCache.get(key);
 }
@@ -49,15 +76,10 @@ export function buildProceduralPet({ builder, palette, variant = 'normal', rarit
   root.name = `ProceduralPet:${speciesBuilder.name}`;
 
   const body = layout.body;
+  const halfHeight = body.height / 2;
   const bodyGeometry = getBodyGeometry(body);
-  const materials = new Array(6).fill(toyMaterial(palette.body));
-  const faceMaterial = new THREE.MeshStandardMaterial({
-    roughness: 0.45,
-    metalness: 0.04,
-    transparent: true,
-  });
-  materials[FRONT_FACE] = faceMaterial;
-  const bodyMesh = new THREE.Mesh(bodyGeometry, materials);
+  const bodyMesh = new THREE.Mesh(bodyGeometry, toyMaterial(palette.body));
+  bodyMesh.scale.set(layout.halfWidth, halfHeight, layout.halfDepth);
   bodyMesh.position.y = layout.centerY;
   bodyMesh.castShadow = false;
   bodyMesh.receiveShadow = true;
@@ -65,8 +87,20 @@ export function buildProceduralPet({ builder, palette, variant = 'normal', rarit
 
   // Textures du visage (cache par espèce + palette + proportions).
   const textures = createFaceTextures(speciesBuilder.name, speciesBuilder.face, palette, body);
+  const faceMaterial = new THREE.MeshStandardMaterial({
+    roughness: 0.45,
+    metalness: 0.04,
+    transparent: true,
+  });
   faceMaterial.map = textures.open;
   faceMaterial.needsUpdate = true;
+
+  // Visage sur une calotte sphérique (surface courbe PS99) placée à l'avant du corps.
+  const faceMesh = new THREE.Mesh(getFaceGeometry(body), faceMaterial);
+  faceMesh.scale.set(layout.halfWidth, halfHeight, layout.halfDepth);
+  faceMesh.position.set(0, layout.centerY, layout.halfDepth * 0.012);
+  faceMesh.castShadow = false;
+  root.add(faceMesh);
 
   // Pattes (adaptées aux proportions du corps).
   const { object3D: pawsGroup } = createPaws(palette.secondary, body);
