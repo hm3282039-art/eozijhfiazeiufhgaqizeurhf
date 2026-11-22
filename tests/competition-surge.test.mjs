@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {rankFor,rankedScore,cupMatchScore,cupStandings} from '../js/competition.js';
+import {createProgressStore} from '../js/cosmetics.js';
+import {evaluateSurge,updateSurge} from '../js/surge.js';
+import {damage,createLoot} from '../js/entities.js';
+import {botCanSee,updateAI} from '../js/ai.js';
+import {weapon} from '../js/weapons.js';
+import {createMap,SpatialGrid,lineBlocked,visionBlocked} from '../js/map.js';
+import {updateCamera,screenToWorld} from '../js/camera.js';
+assert.equal(rankFor(0).name,'Bronze');assert.equal(rankFor(4200).name,'Unreal');
+assert.equal(rankedScore(700,1,80,2).delta,132); // 120 placement + 32 eliminations - 20 entry
+assert.equal(rankedScore(700,80,80,0).delta,-20);assert.equal(rankedScore(0,80,80,0).delta,0);
+assert.equal(cupMatchScore(1,80,3).points,31);assert.equal(cupMatchScore(80,80,5,true).points,0);
+const data=new Map(),storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)},store=createProgressStore(storage);
+store.recordMatch({id:'rank',scope:'ranked',won:true,placement:1,teams:80,kills:2});assert.equal(store.profile.rankPoints,150);assert.equal(store.profile.lastResult.delta,150);
+for(let i=0;i<10;i++)store.recordMatch({id:`cup${i}`,scope:'cup',won:true,placement:1,teams:80,kills:2});assert.equal(store.profile.activeCup.matches.length,10);assert.equal(store.profile.activeCup.points,290);assert.equal(store.profile.cupHistory.length,1);assert.equal(store.profile.cupHistory[0].place,1);assert.equal(store.profile.pr,100);assert.equal(store.profile.earnings,500);assert.equal(cupStandings(store.profile.activeCup)[0].name,'VOUS');
+store.recordMatch({id:'cup9',scope:'cup'});assert.equal(store.profile.cupHistory.length,1);const restored=createProgressStore(storage);assert.equal(restored.profile.rankPoints,150);assert.equal(restored.profile.activeCup.matches.length,10);assert.equal(restored.recordMatch({id:'cup-next',scope:'cup',placement:80,teams:80}),0);assert.equal(restored.profile.activeCup.matches.length,10);assert.equal(restored.resetCup(),true);restored.recordMatch({id:'cup-next',scope:'cup',placement:80,teams:80});assert.equal(restored.profile.activeCup.matches.length,1);
+const fighters=Array.from({length:32},(_,id)=>({id,team:id,alive:true,knocked:false,hp:100,shield:0,kills:0,x:id*10,y:0}));const game={size:1,fighters,loot:[],storm:{phase:6},damageByTeam:Object.fromEntries(fighters.map(f=>[f.team,f.team===0?0:20])),addFeed(){}};assert.equal(evaluateSurge(game).threatened.has(0),true);updateSurge(game,.1);updateSurge(game,7.9);assert.equal(fighters[0].hp,100);updateSurge(game,3);assert.equal(fighters[0].hp,88);damage(game,fighters[1],10,fighters[0]);assert.equal(game.damageByTeam[0],10);game.damageByTeam[0]=100;assert.equal(evaluateSurge(game).threatened.has(0),false);game.fighters.slice(24).forEach(f=>f.alive=false);assert.equal(evaluateSurge(game).active,false);
+const grid=new SpatialGrid(),map={grid},e={x:0,y:0,team:0,angle:0},enemy={x:90,y:0,team:1,alive:true,hidden:false};assert.equal(botCanSee({map,mode:'royale'},e,enemy),true);enemy.x=-90;assert.equal(botCanSee({map,mode:'royale'},e,enemy),false);enemy.x=90;enemy.hidden=true;assert.equal(botCanSee({map,mode:'royale'},e,enemy),false);enemy.hidden=false;grid.add({x:40,y:-30,w:10,h:60});assert.equal(botCanSee({map,mode:'royale'},e,enemy),false);
+const sightGrid=new SpatialGrid(),bushGrid=new SpatialGrid();bushGrid.add({x:40,y:10,w:20,h:40});const bushes={grid:sightGrid,bushGrid};assert.equal(lineBlocked(bushes,10,30,100,30),false);assert.equal(visionBlocked(bushes,10,30,100,30),true);assert.equal(visionBlocked(bushes,50,30,100,30),false);
+const pathGrid=new SpatialGrid();pathGrid.add({x:1040,y:970,w:20,h:80});const bot={x:1000,y:1000,r:11,alive:true,player:false,knocked:false,hp:100,shield:0,team:1,id:1,think:999,cooldown:0,angle:0,step:0,inventory:[weapon('assault')],slot:0,goal:{x:1120,y:1000}};const pathGame={map:{grid:pathGrid},time:0,gracePeriod:0,mode:'royale',botSkill:.5,loot:[],fighters:[bot],noises:[],storm:{x:1000,y:1000,radius:3000},emitWave(){}};for(let i=0;i<300;i++){pathGame.time+=.04;updateAI(pathGame,.04)}assert.ok(bot.x>1060,'le bot contourne le mur');
+const world=createMap(),loot=createLoot(world,'royale');assert.ok(loot.length>500);for(const item of loot.filter(x=>x.chest&&!x.mythic))assert.ok(world.compounds.some(b=>item.x>b.x&&item.x<b.x+b.w&&item.y>b.y&&item.y<b.y+b.h));
+const cg={camera:{cx:100,cy:100,zoom:1.6},view:{x:100,y:100},mouse:{x:400,y:300},width:800,height:600};updateCamera(cg,0,true);const point=screenToWorld(cg,400,300);assert.equal(point.x,100);assert.equal(point.y,100);
+console.log('OK — Ranked, Cup locale, Storm Surge, vision IA, coffres et caméra');

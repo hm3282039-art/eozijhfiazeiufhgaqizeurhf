@@ -1,0 +1,11 @@
+{
+  "name": "last-signal",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --experimental-default-type=module tests/game.test.mjs && node --experimental-default-type=module tests/cosmetics.test.mjs && node --experimental-default-type=module tests/loot-storm.test.mjs && node --experimental-default-type=module tests/competition-surge.test.mjs && node --experimental-default-type=module tests/arsenal-profile.test.mjs && node --experimental-default-type=module tests/ranked-cups.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}
